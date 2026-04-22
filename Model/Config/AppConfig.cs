@@ -10,7 +10,8 @@ namespace EasySave.Model.Config
     {
         public string Language { get; set; } = "en";
         public string LogDirectory { get; set; } = "Logs";
-        public string StatusFilePath { get; set; } = "status.json";
+        public string StatusFilePath
+        { get; set; } = "status.json";
         public string DefaultBackupLocation { get; set; } = "Backups";
 
         /// <summary>

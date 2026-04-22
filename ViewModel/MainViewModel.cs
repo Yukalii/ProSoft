@@ -1,4 +1,4 @@
-using EasySave.Localization;
+using EasySave.Localisation;
 using EasySave.Model.Backup;
 using EasySave.Model.Config;
 
@@ -11,12 +11,12 @@ namespace EasySave.ViewModel
     public class MainViewModel
     {
         public BackupJobManager JobManager { get; }
-        public LocalizationService Localization { get; }
+        public LocalisationService Localization { get; }
         public ConfigManager Config { get; }
 
         public MainViewModel(
             BackupJobManager jobManager,
-            LocalizationService localization,
+            LocalisationService localization,
             ConfigManager config)
         {
             JobManager = jobManager;

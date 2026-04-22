@@ -30,9 +30,9 @@ namespace EasySave
             // Localisation
             string localisationPath = Path.Combine(
                 Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.Parent!.FullName,
-                "localisation", "Languages"
+                "Localization", "Languages"
             );
-            localisationService localisation = new localisationService(localisationPath);
+            LocalisationService localisation = new LocalisationService(localisationPath);
             localisation.LoadLanguage(config.Config.Language);
 
             // Backup job manager
@@ -74,18 +74,18 @@ namespace EasySave
                     int from = int.Parse(parts[0]);
                     int to = int.Parse(parts[1]);
                     for (int i = from; i <= to; i++)
-                        jobManager.ExecuteJob(i);
+                        jobManager.ExecuteJob(i.ToString());
                 }
                 else if (arg.Contains(';'))
                 {
                     // "1;3" → run jobs 1 and 3
                     foreach (var index in arg.Split(';'))
-                        jobManager.ExecuteJob(int.Parse(index.Trim()));
+                        jobManager.ExecuteJob(index.Trim());
                 }
                 else
                 {
                     // Single job: "EasySave.exe 2"
-                    jobManager.ExecuteJob(int.Parse(arg));
+                    jobManager.ExecuteJob(arg);
                 }
             }
             else

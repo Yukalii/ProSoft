@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using EasySave.Localization;
+using EasySave.Localisation;
 using EasySave.Model.Config;
 
 namespace EasySave.ViewModel
 {
     public class SettingsViewModel
     {
-        private readonly LocalizationService _localization;
+        private readonly LocalisationService _localization;
         private readonly ConfigManager _config;
 
         public List<string> AvailableLanguages { get; } =
@@ -15,7 +15,7 @@ namespace EasySave.ViewModel
 
         public string SelectedLanguage { get; set; }
 
-        public SettingsViewModel(LocalizationService localization, ConfigManager config)
+        public SettingsViewModel(LocalisationService localization, ConfigManager config)
         {
             _localization = localization;
             _config = config;

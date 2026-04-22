@@ -1,130 +1,108 @@
 ﻿using System;
-using System.IO;
 using System.Diagnostics;
-using EasySave.Model;
+using System.IO;
+using EasySave.Model.Backup;
+using EasySave.Model.Logging;
+using EasySave.Model.Observers;
+using EasySave.Model.Storage;
 
 namespace EasySave.Model.Strategies
 {
+    /// <summary>
+    /// Implements a differential backup strategy.
+    /// Copies only files that are new or modified compared to the target.
+    /// Logs each action and notifies observers of real-time progress.
+    /// </summary>
     public class DifferentialBackupStrategy : IBackupStrategy
     {
-        private readonly IStorage _storage;
-        private readonly ILogger _logger;
-
-        public DifferentialBackupStrategy(IStorage storage, ILogger logger)
+        public void Execute(BackupJobContext context)
         {
-            _storage = storage;
-            _logger = logger;
-        }
+            var storage = context.Storage;
+            var logger = context.Logger;
+            var observers = context.Observers;
 
-        public void Execute(BackupJob job)
-        {
-            var allFiles = _storage.GetFiles(job.SourcePath);
-
-            // --- Filter: only files absent from target or newer than target copy ---
-            var filesToCopy = new System.Collections.Generic.List<string>();
+            var allFiles = storage.EnumerateFiles(context.SourcePath);
             long totalSize = 0;
+            int totalFiles = 0;
 
-            foreach (var srcFile in allFiles)
+            // Pre-calculate totals for progress reporting
+            foreach (var file in allFiles)
             {
-                string relativePath = Path.GetRelativePath(job.SourcePath, srcFile);
-                string tgtFile = Path.Combine(job.TargetPath, relativePath);
-
-                bool needsCopy = !File.Exists(tgtFile)
-                    || File.GetLastWriteTimeUtc(srcFile) > File.GetLastWriteTimeUtc(tgtFile);
-
-                if (needsCopy)
-                {
-                    filesToCopy.Add(srcFile);
-                    totalSize += new FileInfo(srcFile).Length;
-                }
+                var info = storage.GetFileInfo(file);
+                totalSize += info.Size;
+                totalFiles++;
             }
 
-            int totalFiles = filesToCopy.Count;
-            int processed = 0;
             long processedSize = 0;
+            int processedFiles = 0;
 
-            job.NotifyObservers(new StatusSnapshot
+            foreach (var sourceFile in storage.EnumerateFiles(context.SourcePath))
             {
-                JobName = job.Name,
-                State = "Active",
-                TotalFiles = totalFiles,
-                ProcessedFiles = processed,
-                TotalSize = totalSize,
-                ProcessedSize = processedSize,
-                Timestamp = DateTime.Now
-            });
+                string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
+                string destinationFile = Path.Combine(context.TargetPath, relativePath);
 
-            foreach (var srcFile in filesToCopy)
-            {
-                string relativePath = Path.GetRelativePath(job.SourcePath, srcFile);
-                string tgtFile = Path.Combine(job.TargetPath, relativePath);
+                var sourceInfo = storage.GetFileInfo(sourceFile);
+                var targetInfo = storage.GetFileInfo(destinationFile);
 
-                string? tgtDir = Path.GetDirectoryName(tgtFile);
-                if (tgtDir != null && !Directory.Exists(tgtDir))
-                    Directory.CreateDirectory(tgtDir);
+                bool mustCopy =
+                    !targetInfo.Exists ||
+                    sourceInfo.LastModified > targetInfo.LastModified ||
+                    sourceInfo.Size != targetInfo.Size;
 
-                long fileSize = new FileInfo(srcFile).Length;
-                long transferTime = -1;
-
-                try
+                if (mustCopy)
                 {
-                    var sw = Stopwatch.StartNew();
-                    _storage.CopyFile(srcFile, tgtFile);
-                    sw.Stop();
-                    transferTime = sw.ElapsedMilliseconds;
+                    Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
 
-                    processed++;
-                    processedSize += fileSize;
-                }
-                catch (Exception ex)
-                {
-                    _logger.Log(new LogEntry
+                    var stopwatch = Stopwatch.StartNew();
+                    bool success = storage.CopyFile(sourceFile, destinationFile);
+                    stopwatch.Stop();
+
+                    long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
+
+                    logger.LogEntry(new LogEntry
                     {
                         Timestamp = DateTime.Now,
-                        BackupName = job.Name,
-                        SourceFile = srcFile,
-                        TargetFile = tgtFile,
-                        FileSize = fileSize,
-                        TransferTimeMs = transferTime,
-                        Error = ex.Message
+                        JobName = context.JobName,
+                        SourcePath = sourceFile,
+                        DestinationPath = destinationFile,
+                        FileSize = sourceInfo.Size,
+                        TransferTimeMs = transferTime
                     });
-                    continue;
                 }
 
-                _logger.Log(new LogEntry
-                {
-                    Timestamp = DateTime.Now,
-                    BackupName = job.Name,
-                    SourceFile = srcFile,
-                    TargetFile = tgtFile,
-                    FileSize = fileSize,
-                    TransferTimeMs = transferTime
-                });
+                processedFiles++;
+                processedSize += sourceInfo.Size;
 
-                job.NotifyObservers(new StatusSnapshot
-                {
-                    JobName = job.Name,
-                    State = "Active",
-                    TotalFiles = totalFiles,
-                    ProcessedFiles = processed,
-                    TotalSize = totalSize,
-                    ProcessedSize = processedSize,
-                    CurrentSourceFile = srcFile,
-                    CurrentTargetFile = tgtFile,
-                    Timestamp = DateTime.Now
-                });
+                var snapshot = new StatusSnapshot(
+                    context.JobName,
+                    DateTime.Now,
+                    "Active",
+                    totalFiles,
+                    totalSize,
+                    processedFiles,
+                    processedSize,
+                    sourceFile,
+                    mustCopy ? destinationFile : null
+                );
+
+                foreach (var obs in observers)
+                    obs.OnJobUpdated(snapshot);
             }
 
-            job.NotifyObservers(new StatusSnapshot
-            {
-                JobName = job.Name,
-                State = "Inactive",
-                TotalFiles = totalFiles,
-                ProcessedFiles = processed,
-                TotalSize = totalSize,
-                ProcessedSize = processedSize,
-                Timestamp = DateTime.Now
-            });
+            var finalSnapshot = new StatusSnapshot(
+                context.JobName,
+                DateTime.Now,
+                "Inactive",
+                totalFiles,
+                totalSize,
+                processedFiles,
+                processedSize,
+                null,
+                null
+            );
+
+            foreach (var obs in observers)
+                obs.OnJobUpdated(finalSnapshot);
         }
     }
 }

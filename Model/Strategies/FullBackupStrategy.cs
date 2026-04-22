@@ -1,119 +1,107 @@
 ﻿using System;
-using System.IO;
+using System.Collections.Generic;
+using System.Text;
+
+using System;
 using System.Diagnostics;
-using EasySave.Model;
+using System.IO;
+using EasySave.Model.Backup;
+using EasySave.Model.Logging;
+using EasySave.Model.Observers;
+using EasySave.Model.Storage;
 
 namespace EasySave.Model.Strategies
 {
+    /// <summary>
+    /// Implements a full backup strategy.
+    /// Copies all files from the source directory to the target directory,
+    /// logs each action, and notifies observers of real-time progress.
+    /// </summary>
     public class FullBackupStrategy : IBackupStrategy
     {
-        private readonly IStorage _storage;
-        private readonly ILogger _logger;
-
-        public FullBackupStrategy(IStorage storage, ILogger logger)
+        public void Execute(BackupJobContext context)
         {
-            _storage = storage;
-            _logger = logger;
-        }
+            var storage = context.Storage;
+            var logger = context.Logger;
+            var observers = context.Observers;
 
-        public void Execute(BackupJob job)
-        {
-            var allFiles = _storage.GetFiles(job.SourcePath);
+            var allFiles = storage.EnumerateFiles(context.SourcePath);
             long totalSize = 0;
+            int totalFiles = 0;
+
+            // Pre-calculate totals for progress reporting
             foreach (var file in allFiles)
-                totalSize += new FileInfo(file).Length;
+            {
+                var info = storage.GetFileInfo(file);
+                totalSize += info.Size;
+                totalFiles++;
+            }
 
-            int totalFiles = allFiles.Count;
-            int processed = 0;
             long processedSize = 0;
+            int processedFiles = 0;
 
-            // Notify: job starting
-            job.NotifyObservers(new StatusSnapshot
+            foreach (var sourceFile in storage.EnumerateFiles(context.SourcePath))
             {
-                JobName = job.Name,
-                State = "Active",
-                TotalFiles = totalFiles,
-                ProcessedFiles = processed,
-                TotalSize = totalSize,
-                ProcessedSize = processedSize,
-                Timestamp = DateTime.Now
-            });
+                string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
+                string destinationFile = Path.Combine(context.TargetPath, relativePath);
 
-            foreach (var srcFile in allFiles)
-            {
-                // Build the mirrored target path
-                string relativePath = Path.GetRelativePath(job.SourcePath, srcFile);
-                string tgtFile = Path.Combine(job.TargetPath, relativePath);
+                Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
 
-                // Ensure target sub-directory exists
-                string? tgtDir = Path.GetDirectoryName(tgtFile);
-                if (tgtDir != null && !Directory.Exists(tgtDir))
-                    Directory.CreateDirectory(tgtDir);
+                var fileInfo = storage.GetFileInfo(sourceFile);
 
-                long fileSize = new FileInfo(srcFile).Length;
-                long transferTime = -1;
+                var stopwatch = Stopwatch.StartNew();
+                bool success = storage.CopyFile(sourceFile, destinationFile);
+                stopwatch.Stop();
 
-                try
-                {
-                    var sw = Stopwatch.StartNew();
-                    _storage.CopyFile(srcFile, tgtFile);
-                    sw.Stop();
-                    transferTime = sw.ElapsedMilliseconds;
+                long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
 
-                    processed++;
-                    processedSize += fileSize;
-                }
-                catch (Exception ex)
-                {
-                    // transferTime stays negative to signal error (spec requirement)
-                    _logger.Log(new LogEntry
-                    {
-                        Timestamp = DateTime.Now,
-                        BackupName = job.Name,
-                        SourceFile = srcFile,
-                        TargetFile = tgtFile,
-                        FileSize = fileSize,
-                        TransferTimeMs = transferTime,
-                        Error = ex.Message
-                    });
-                    continue;
-                }
-
-                _logger.Log(new LogEntry
+                // Log the action
+                logger.LogEntry(new LogEntry
                 {
                     Timestamp = DateTime.Now,
-                    BackupName = job.Name,
-                    SourceFile = srcFile,
-                    TargetFile = tgtFile,
-                    FileSize = fileSize,
+                    JobName = context.JobName,
+                    SourcePath = sourceFile,
+                    DestinationPath = destinationFile,
+                    FileSize = fileInfo.Size,
                     TransferTimeMs = transferTime
                 });
 
-                job.NotifyObservers(new StatusSnapshot
-                {
-                    JobName = job.Name,
-                    State = "Active",
-                    TotalFiles = totalFiles,
-                    ProcessedFiles = processed,
-                    TotalSize = totalSize,
-                    ProcessedSize = processedSize,
-                    CurrentSourceFile = srcFile,
-                    CurrentTargetFile = tgtFile,
-                    Timestamp = DateTime.Now
-                });
+                // Update progress
+                processedFiles++;
+                processedSize += fileInfo.Size;
+
+                // Notify observers
+                var snapshot = new StatusSnapshot(
+                    context.JobName,
+                    DateTime.Now,
+                    "Active",
+                    totalFiles,
+                    totalSize,
+                    processedFiles,
+                    processedSize,
+                    sourceFile,
+                    destinationFile
+                );
+
+                foreach (var obs in observers)
+                    obs.OnJobUpdated(snapshot);
             }
 
-            // Notify: job complete
-            job.NotifyObservers(new StatusSnapshot
-            {
-                JobName = job.Name,
-                State = "Inactive",
-                TotalFiles = totalFiles,
-                ProcessedFiles = processed,
-                TotalSize = totalSize,
-                ProcessedSize = processedSize,
-                Timestamp = DateTime.Now
-            });
+            // Final inactive status
+            var finalSnapshot = new StatusSnapshot(
+                context.JobName,
+                DateTime.Now,
+                "Inactive",
+                totalFiles,
+                totalSize,
+                processedFiles,
+                processedSize,
+                null,
+                null
+            );
+
+            foreach (var obs in observers)
+                obs.OnJobUpdated(finalSnapshot);
         }
     }
 }

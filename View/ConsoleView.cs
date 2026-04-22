@@ -10,14 +10,14 @@ namespace EasySave.View
         private readonly JobListViewModel _jobListVM;
         private readonly SettingsViewModel _settingsVM;
         private readonly BackupExecutionViewModel _executionVM;
-        private readonly localisationService _localisation;
+        private readonly LocalisationService _localisation;
 
         public ConsoleView(
             MainViewModel mainVM,
             JobListViewModel jobListVM,
             SettingsViewModel settingsVM,
             BackupExecutionViewModel executionVM,
-            localisationService localisation)
+            LocalisationService localisation)
         {
             _mainVM = mainVM;
             _jobListVM = jobListVM;

@@ -6,7 +6,7 @@ namespace EasySave.Localisation
     {
         private readonly Dictionary<string, string> _translations;
 
-        public JsonlocalisationService(string filePath)
+        public JsonLocalisationService(string filePath)
         {
             if (!File.Exists(filePath))
                 throw new FileNotFoundException("localisation file not found.", filePath);

@@ -16,7 +16,7 @@ namespace EasySave.Localisation
 
         public string CurrentLanguage { get; private set; } = "en";
 
-        public KocalisationService(string languagesDirectory)
+        public LocalisationService(string languagesDirectory)
         {
             _languagesDirectory = languagesDirectory;
 
