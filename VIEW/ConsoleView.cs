@@ -161,8 +161,7 @@ namespace EasySave.View
                     ? "DifferentialBackupStrategy"
                     : "FullBackupStrategy";
 
-                editorVM.SaveCommand.Execute(null);
-                _jobListVM.RefreshJobsCommand.Execute(null);
+                editorVM.Save();
 
                 Console.WriteLine("\n" + _localisation.Translate(LanguageKeys.JobCreated));
                 Console.WriteLine("1. " + _localisation.Translate(LanguageKeys.AddJob));
@@ -200,10 +199,12 @@ namespace EasySave.View
                 string? input = Console.ReadLine();
                 if (input?.ToUpper() == "B") return;
 
-                if (int.TryParse(input, out int choice) && choice >= 1 && choice <= _jobListVM.Jobs.Count)
+                if (int.TryParse(input, out int choice) &&
+                    choice >= 1 &&
+                    choice <= _jobListVM.Jobs.Count)
                 {
-                    _jobListVM.SelectedJob = _jobListVM.Jobs[choice - 1];
-                    _jobListVM.DeleteJobCommand.Execute(null);
+                    string jobName = _jobListVM.Jobs[choice - 1].Name;
+                    _jobListVM.DeleteJob(jobName);
 
                     Console.WriteLine("\n" + _localisation.Translate(LanguageKeys.JobDeleted));
                     Console.WriteLine("1. " + _localisation.Translate(LanguageKeys.DeleteJob));
@@ -240,10 +241,12 @@ namespace EasySave.View
                 string? input = Console.ReadLine();
                 if (input?.ToUpper() == "B") return;
 
-                if (int.TryParse(input, out int choice) && choice >= 1 && choice <= _jobListVM.Jobs.Count)
+                if (int.TryParse(input, out int choice) &&
+                    choice >= 1 &&
+                    choice <= _jobListVM.Jobs.Count)
                 {
                     string jobName = _jobListVM.Jobs[choice - 1].Name;
-                    _executionVM.StartJobCommand.Execute(jobName);
+                    _executionVM.StartJob(jobName);
 
                     while (_executionVM.State == "Active")
                     {
@@ -288,14 +291,14 @@ namespace EasySave.View
                 {
                     case "1":
                         _settingsVM.SelectedLanguage = "en";
-                        _settingsVM.SaveSettingsCommand.Execute(null);
+                        _settingsVM.SaveSettings();
                         Console.WriteLine(_localisation.Translate(LanguageKeys.SettingsSaved));
                         Console.ReadKey();
                         break;
 
                     case "2":
                         _settingsVM.SelectedLanguage = "fr";
-                        _settingsVM.SaveSettingsCommand.Execute(null);
+                        _settingsVM.SaveSettings();
                         Console.WriteLine(_localisation.Translate(LanguageKeys.SettingsSaved));
                         Console.ReadKey();
                         break;
