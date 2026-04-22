@@ -81,7 +81,7 @@ namespace EasySave.View
                     Console.WriteLine("A. " + _localisation.Translate(LanguageKeys.AddJob));
                 else
                     Console.WriteLine("A. " + _localisation.Translate(LanguageKeys.AddJob) +
-                                      $" ({_mainVM.JobManager.Jobs.Count}/{_mainVM.JobManager.MaxJobs} — " +
+                                      $" ({_mainVM.JobManager.Jobs.Count}/{_mainVM.JobManager.MaxJobs} - " +
                                       _localisation.Translate(LanguageKeys.MaxJobsReached) + ")");
 
                 Console.WriteLine("D. " + _localisation.Translate(LanguageKeys.DeleteJob));
