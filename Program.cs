@@ -30,7 +30,7 @@ namespace EasySave
             // Localisation
             string localisationPath = Path.Combine(
                 Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.Parent!.FullName,
-                "Localization", "Languages"
+                "Localisation", "Languages"
             );
             LocalisationService localisation = new LocalisationService(localisationPath);
             localisation.LoadLanguage(config.Config.Language);
