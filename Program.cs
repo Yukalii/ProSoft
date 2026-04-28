@@ -1,7 +1,7 @@
 using EasySave.Localisation;
 using EasySave.Model.Backup;
 using EasySave.Model.Config;
-using EasySave.Model.Logging;
+using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 using EasySave.View;
@@ -15,7 +15,7 @@ namespace EasySave
         {
             // === Initialize core services ===
 
-            // Logging
+            // Logger
             ILogger logger = new JsonLogger("logs");
 
             // Storage

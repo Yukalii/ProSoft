@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 
 using System.Collections.Generic;
-using EasySave.Model.Logging;
+using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 
