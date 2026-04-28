@@ -1,0 +1,6 @@
+{
+  "Language": "en",
+  "LogDirectory": "Logs",
+  "StatusFilePath": "status.json",
+  "DefaultBackupLocation": "Backups"
+}

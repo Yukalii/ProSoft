@@ -53,6 +53,12 @@ namespace EasySave.Localisation
         public const string ProcessedSize = "ProcessedSize";
         public const string CurrentFile = "CurrentFile";
 
+        // Formats
+        public const string LogFormat = "LogFormat";
+        public const string LogFormatJson = "LogFormatJson";
+        public const string LogFormatXml = "LogFormatXml";
+        public const string LogFormatSaved = "LogFormatSaved";
+
         // Errors
         public const string Error = "Error";
         public const string InvalidPath = "InvalidPath";
