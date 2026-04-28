@@ -8,6 +8,12 @@
   "InvalidChoice": "Choix invalide.",
   "SettingsSaved": "Paramètres sauvegardés.",
 
+
+  "LogFormat": "Format des logs",
+  "LogFormatJson": "JSON (par défaut)",
+  "LogFormatXml": "XML",
+  "LogFormatSaved": "Format des logs sauvegardé.",
+
   "ListJobs": "Liste des sauvegardes",
   "CreateJob": "Créer une tâche de sauvegarde",
   "EditJob": "Modifier une tâche de sauvegarde",

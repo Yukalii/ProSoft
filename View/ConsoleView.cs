@@ -12,6 +12,9 @@ namespace EasySave.View
         private readonly BackupExecutionViewModel _executionVM;
         private readonly LocalisationService _localisation;
 
+        /// <summary>
+        /// Initializes the view with all required ViewModels and the localisation service.
+        /// </summary>
         public ConsoleView(
             MainViewModel mainVM,
             JobListViewModel jobListVM,
@@ -26,6 +29,9 @@ namespace EasySave.View
             _localisation = localisation;
         }
 
+        /// <summary>
+        /// Starts the main application loop and displays the main menu.
+        /// </summary>
         public void Run()
         {
             while (true)
@@ -60,6 +66,10 @@ namespace EasySave.View
             }
         }
 
+        /// <summary>
+        /// Displays the list of backup jobs and provides options to add, delete, or run a job.
+        /// Disables the add option when the maximum number of jobs is reached.
+        /// </summary>
         private void ShowJobList()
         {
             while (true)
@@ -122,6 +132,11 @@ namespace EasySave.View
             }
         }
 
+        /// <summary>
+        /// Displays the job creation form and saves the new job.
+        /// The user can type "B" at any field to cancel and go back.
+        /// Loops to allow creating multiple jobs consecutively.
+        /// </summary>
         private void ShowJobEditor()
         {
             while (true)
@@ -170,6 +185,7 @@ namespace EasySave.View
 
                 if (Console.ReadLine() != "1") return;
 
+                // Re-check the job limit before allowing another creation
                 if (!_mainVM.JobManager.CanAddJob)
                 {
                     Console.WriteLine(_localisation.Translate(LanguageKeys.MaxJobsReached));
@@ -179,6 +195,10 @@ namespace EasySave.View
             }
         }
 
+        /// <summary>
+        /// Displays the list of jobs and prompts the user to select one for deletion.
+        /// Loops to allow deleting multiple jobs consecutively.
+        /// </summary>
         private void DeleteJob()
         {
             while (true)
@@ -221,6 +241,10 @@ namespace EasySave.View
             }
         }
 
+        /// <summary>
+        /// Displays the list of jobs and prompts the user to select one to execute.
+        /// Shows real-time progress until the backup completes.
+        /// </summary>
         private void RunJob()
         {
             while (true)
@@ -248,6 +272,7 @@ namespace EasySave.View
                     string jobName = _jobListVM.Jobs[choice - 1].Name;
                     _executionVM.StartJob(jobName);
 
+                    // Poll and display real-time progress until the job completes
                     while (_executionVM.State == "Active")
                     {
                         Console.Clear();
@@ -274,14 +299,25 @@ namespace EasySave.View
             }
         }
 
+        /// <summary>
+        /// Displays the settings menu.
+        /// Allows the user to change the application language and the log file format.
+        /// Changes are saved and applied immediately.
+        /// </summary>
         private void ShowSettings()
         {
             while (true)
             {
                 Console.Clear();
                 Console.WriteLine("=== " + _localisation.Translate(LanguageKeys.Settings) + " ===");
-                Console.WriteLine("1. English");
-                Console.WriteLine("2. Français");
+
+                // Show current values so the user knows what is active
+                Console.WriteLine($"[{_localisation.Translate(LanguageKeys.Language)}: {_settingsVM.SelectedLanguage.ToUpper()}]");
+                Console.WriteLine($"[{_localisation.Translate(LanguageKeys.LogFormat)}: {_settingsVM.SelectedLogFormat.ToUpper()}]");
+                Console.WriteLine();
+
+                Console.WriteLine("1. " + _localisation.Translate(LanguageKeys.Language));
+                Console.WriteLine("2. " + _localisation.Translate(LanguageKeys.LogFormat));
                 Console.WriteLine("3. " + _localisation.Translate(LanguageKeys.Back));
                 Console.Write(_localisation.Translate(LanguageKeys.Choice) + ": ");
 
@@ -290,17 +326,11 @@ namespace EasySave.View
                 switch (input)
                 {
                     case "1":
-                        _settingsVM.SelectedLanguage = "en";
-                        _settingsVM.SaveSettings();
-                        Console.WriteLine(_localisation.Translate(LanguageKeys.SettingsSaved));
-                        Console.ReadKey();
+                        ShowLanguageSettings();
                         break;
 
                     case "2":
-                        _settingsVM.SelectedLanguage = "fr";
-                        _settingsVM.SaveSettings();
-                        Console.WriteLine(_localisation.Translate(LanguageKeys.SettingsSaved));
-                        Console.ReadKey();
+                        ShowLogFormatSettings();
                         break;
 
                     case "3":
@@ -311,6 +341,87 @@ namespace EasySave.View
                         Console.ReadKey();
                         break;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Sub-menu for changing the application language.
+        /// </summary>
+        private void ShowLanguageSettings()
+        {
+            Console.Clear();
+            Console.WriteLine("=== " + _localisation.Translate(LanguageKeys.Language) + " ===");
+            Console.WriteLine("1. English");
+            Console.WriteLine("2. Français");
+            Console.WriteLine("3. " + _localisation.Translate(LanguageKeys.Back));
+            Console.Write(_localisation.Translate(LanguageKeys.Choice) + ": ");
+
+            string? input = Console.ReadLine();
+
+            switch (input)
+            {
+                case "1":
+                    _settingsVM.SelectedLanguage = "en";
+                    _settingsVM.SaveSettings();
+                    Console.WriteLine(_localisation.Translate(LanguageKeys.SettingsSaved));
+                    Console.ReadKey();
+                    break;
+
+                case "2":
+                    _settingsVM.SelectedLanguage = "fr";
+                    _settingsVM.SaveSettings();
+                    Console.WriteLine(_localisation.Translate(LanguageKeys.SettingsSaved));
+                    Console.ReadKey();
+                    break;
+
+                case "3":
+                    return;
+
+                default:
+                    Console.WriteLine(_localisation.Translate(LanguageKeys.InvalidChoice));
+                    Console.ReadKey();
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Sub-menu for changing the log file format between JSON and XML.
+        /// The new format applies to all log entries written after the change.
+        /// </summary>
+        private void ShowLogFormatSettings()
+        {
+            Console.Clear();
+            Console.WriteLine("=== " + _localisation.Translate(LanguageKeys.LogFormat) + " ===");
+            Console.WriteLine($"1. {_localisation.Translate(LanguageKeys.LogFormatJson)}");
+            Console.WriteLine($"2. {_localisation.Translate(LanguageKeys.LogFormatXml)}");
+            Console.WriteLine("3. " + _localisation.Translate(LanguageKeys.Back));
+            Console.Write(_localisation.Translate(LanguageKeys.Choice) + ": ");
+
+            string? input = Console.ReadLine();
+
+            switch (input)
+            {
+                case "1":
+                    _settingsVM.SelectedLogFormat = "json";
+                    _settingsVM.SaveSettings();
+                    Console.WriteLine(_localisation.Translate(LanguageKeys.LogFormatSaved));
+                    Console.ReadKey();
+                    break;
+
+                case "2":
+                    _settingsVM.SelectedLogFormat = "xml";
+                    _settingsVM.SaveSettings();
+                    Console.WriteLine(_localisation.Translate(LanguageKeys.LogFormatSaved));
+                    Console.ReadKey();
+                    break;
+
+                case "3":
+                    return;
+
+                default:
+                    Console.WriteLine(_localisation.Translate(LanguageKeys.InvalidChoice));
+                    Console.ReadKey();
+                    break;
             }
         }
     }

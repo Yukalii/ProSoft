@@ -8,6 +8,11 @@
   "InvalidChoice": "Invalid choice.",
   "SettingsSaved": "Settings saved.",
 
+  "LogFormat": "Log format",
+  "LogFormatJson": "JSON (default)",
+  "LogFormatXml": "XML",
+  "LogFormatSaved": "Log format saved.",
+
   "ListJobs": "List backup jobs",
   "CreateJob": "Create Backup Job",
   "EditJob": "Edit Backup Job",
