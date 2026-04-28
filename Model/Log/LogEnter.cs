@@ -1,7 +1,9 @@
 using System;
+using System.Xml.Serialization;
 
 namespace EasySave.Model.Logging
 {
+    [XmlRoot("LogEntry")]
     public class LogEntry
     {
         public DateTime Timestamp { get; set; }
