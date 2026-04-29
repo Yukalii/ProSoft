@@ -1,5 +1,4 @@
-﻿using EasySave.Model.Config;
-using System.Text.Json;
+﻿using System.Text.Json;
 using EasySave.Model.Logger;
 using EasySave.Model.Storage;
 using EasySave.Model.Strategies;
@@ -16,7 +15,7 @@ namespace EasySave.Model.Backup
         private readonly string _jobsFilePath;
         private readonly IStorage _storage;
         private readonly ILogger _logger;
-        private readonly IBackupObserver _statusObserver;
+        private IBackupObserver _statusObserver;
         private readonly AppConfig _config;
 
         /// <summary>
@@ -154,6 +153,13 @@ namespace EasySave.Model.Backup
                 "DifferentialBackupStrategy" => new DifferentialBackupStrategy(),
                 _ => throw new InvalidOperationException($"Unknown strategy: {type}")
             };
+        }
+        public void RegisterObserver(IBackupObserver observer)
+        {
+            _statusObserver = observer;
+
+            foreach (var job in Jobs)
+                job.AttachObserver(observer);
         }
     }
 

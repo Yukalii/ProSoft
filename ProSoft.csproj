@@ -1,11 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
-		<TargetFramework>net8.0</TargetFramework>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<AssemblyName>EasySave</AssemblyName>
+		<RootNamespace>EasySave</RootNamespace>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<Content Include="Localisation\Languages\en.json">
+			<Link>Languages\en.json</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Localisation\Languages\fr.json">
+			<Link>Languages\fr.json</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
 	<!-- Prevent CryptoSoft source files from being compiled into ProSoft -->
 	<ItemGroup>
@@ -21,7 +35,7 @@
 		</ProjectReference>
 	</ItemGroup>
 	<ItemGroup>
-	  <Folder Include="CryptoSoft\" />
+		<Folder Include="CryptoSoft\" />
 	</ItemGroup>
 
 	<!-- After ProSoft builds, copy CryptoSoft.exe next to it -->

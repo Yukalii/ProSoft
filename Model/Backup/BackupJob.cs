@@ -16,6 +16,7 @@ namespace EasySave.Model.Backup
         public string Name { get; }
         public string SourcePath { get; }
         public string TargetPath { get; }
+        public string StrategyName => Strategy.GetType().Name;
         public IBackupStrategy Strategy { get; }
 
         private readonly IStorage _storage;
