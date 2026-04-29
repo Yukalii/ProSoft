@@ -1,5 +1,3 @@
-using System;
-
 namespace EasySave.Model.Config
 {
     /// <summary>
@@ -10,8 +8,8 @@ namespace EasySave.Model.Config
     {
         public string Language { get; set; } = "en";
         public string LogDirectory { get; set; } = "Logs";
-        public string StatusFilePath
-        { get; set; } = "status.json";
+        public string LogFormat { get; set; } = "json"; // "json" or "xml"
+        public string StatusFilePath { get; set; } = "status.json";
         public string DefaultBackupLocation { get; set; } = "Backups";
 
         /// <summary>
@@ -23,6 +21,7 @@ namespace EasySave.Model.Config
             {
                 Language = "en",
                 LogDirectory = "Logs",
+                LogFormat = "json",
                 StatusFilePath = "status.json",
                 DefaultBackupLocation = "Backups"
             };

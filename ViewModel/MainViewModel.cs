@@ -6,21 +6,21 @@ namespace EasySave.ViewModel
 {
     /// <summary>
     /// Root ViewModel for the console application.
-    /// Provides access to core services: job manager, localization, config.
+    /// Provides access to core services: job manager, localisation, config.
     /// </summary>
     public class MainViewModel
     {
         public BackupJobManager JobManager { get; }
-        public LocalisationService Localization { get; }
+        public LocalisationService Localisation { get; }
         public ConfigManager Config { get; }
 
         public MainViewModel(
             BackupJobManager jobManager,
-            LocalisationService localization,
+            LocalisationService localisation,
             ConfigManager config)
         {
             JobManager = jobManager;
-            Localization = localization;
+            Localisation = localisation;
             Config = config;
         }
 
@@ -29,7 +29,7 @@ namespace EasySave.ViewModel
         /// </summary>
         public void Initialize()
         {
-            Localization.LoadLanguage(Config.Config.Language);
+            Localisation.LoadLanguage(Config.Config.Language);
         }
     }
 }

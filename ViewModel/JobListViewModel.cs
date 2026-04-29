@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using EasySave.Model.Backup;
 
 namespace EasySave.ViewModel

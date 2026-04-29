@@ -1,6 +1,4 @@
-using System;
-
-namespace EasySave.Model.Logging
+namespace EasySave.Model.Logger
 {
     public interface ILogger
     {

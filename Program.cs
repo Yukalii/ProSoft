@@ -1,7 +1,7 @@
 using EasySave.Localisation;
 using EasySave.Model.Backup;
 using EasySave.Model.Config;
-using EasySave.Model.Logging;
+using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 using EasySave.View;
@@ -15,9 +15,6 @@ namespace EasySave
         {
             // === Initialize core services ===
 
-            // Logging
-            ILogger logger = new JsonLogger("logs");
-
             // Storage
             IStorage storage = new LocalStorage();
 
@@ -30,16 +27,23 @@ namespace EasySave
             // Localisation
             string localisationPath = Path.Combine(
                 Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.Parent!.FullName,
-                "Localization", "Languages"
+                "Localisation", "Languages"
             );
             LocalisationService localisation = new LocalisationService(localisationPath);
             localisation.LoadLanguage(config.Config.Language);
+
+            // Logging - DynamicLogger reads the format from config and can be swapped at runtime
+            ILogger initialLogger = LoggerFactory.Resolve(
+                config.Config.LogFormat,
+                config.Config.LogDirectory
+            );
+            DynamicLogger dynamicLogger = new DynamicLogger(initialLogger);
 
             // Backup job manager
             BackupJobManager jobManager = new BackupJobManager(
                 "jobs.json",
                 storage,
-                logger,
+                dynamicLogger,
                 statusTracker
             );
 
@@ -47,7 +51,7 @@ namespace EasySave
 
             MainViewModel mainVM = new MainViewModel(jobManager, localisation, config);
             JobListViewModel jobListVM = new JobListViewModel(jobManager);
-            SettingsViewModel settingsVM = new SettingsViewModel(localisation, config);
+            SettingsViewModel settingsVM = new SettingsViewModel(localisation, config, dynamicLogger);
             BackupExecutionViewModel execVM = new BackupExecutionViewModel(jobManager);
 
             // === Initialize View ===
@@ -61,7 +65,6 @@ namespace EasySave
             );
 
             // === CLI mode vs Interactive mode ===
-
             if (args.Length > 0)
             {
                 // Command-line mode: "EasySave.exe 1-3" or "EasySave.exe 1;3"
