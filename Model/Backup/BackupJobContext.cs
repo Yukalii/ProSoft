@@ -1,7 +1,4 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using EasySave.Model.Logger;
+﻿using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 
