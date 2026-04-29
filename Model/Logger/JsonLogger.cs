@@ -1,7 +1,6 @@
-using System;
 using System.Text.Json;
 
-namespace EasySave.Model.Logging
+namespace EasySave.Model.Logger
 {
     public class JsonLogger : ILogger
     {
