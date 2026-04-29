@@ -1,6 +1,4 @@
-﻿using System.Windows.Input;
-
-namespace EasySave.ViewModel
+﻿namespace EasySave.ViewModel
 {
     public class RelayCommand : ICommand
     {

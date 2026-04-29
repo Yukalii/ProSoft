@@ -1,9 +1,3 @@
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Text.Json;
-using System.Windows.Data;
-
 namespace EasySave.Localisation
 {
     public class LocalisationService : INotifyPropertyChanged
@@ -15,7 +9,6 @@ namespace EasySave.Localisation
 
         public string CurrentLanguage { get; private set; } = "en";
 
-        // ✅ Indexeur pour {Binding Loc[clé]} dans le XAML
         public string this[string key] => Translate(key);
 
         public LocalisationService(string languagesDirectory)
@@ -39,7 +32,6 @@ namespace EasySave.Localisation
             _translations = JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new();
             CurrentLanguage = languageCode;
 
-            // ✅ Notifie tous les bindings que les traductions ont changé
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(Binding.IndexerName));
         }
 

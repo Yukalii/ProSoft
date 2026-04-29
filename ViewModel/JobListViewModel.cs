@@ -17,13 +17,11 @@ namespace EasySave.ViewModel
 
         public List<string> Strategies { get; } = new() { "FullBackupStrategy", "DifferentialBackupStrategy" };
 
-        // ✅ titre dynamique selon le mode
         public string Title => _originalName == null ? "Nouveau job" : "Modifier le job";
 
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
 
-        // Constructeur création
         public JobEditorViewModel(BackupJobManager jobManager, Action onSaved)
         {
             _jobManager = jobManager;

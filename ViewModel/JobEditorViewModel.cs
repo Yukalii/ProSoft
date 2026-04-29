@@ -1,6 +1,4 @@
 using EasySave.Model.Backup;
-using System.Collections.ObjectModel;
-using System.Windows.Input;
 
 namespace EasySave.ViewModel
 {

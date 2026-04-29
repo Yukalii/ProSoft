@@ -1,6 +1,4 @@
-﻿using System.Windows.Controls;
-
-namespace EasySave.View
+﻿namespace EasySave.View
 {
     public partial class BackupExecutionView : UserControl
     {

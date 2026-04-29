@@ -1,6 +1,4 @@
-﻿using System.Windows;
-
-namespace EasySave.View
+﻿namespace EasySave.View
 {
     public partial class MainWindow : Window
     {

@@ -1,8 +1,6 @@
 using EasySave.Model.Config;
 using EasySave.Localisation;
 using EasySave.Model.Logger;
-using System.Collections.Generic;
-using System.Windows.Input;
 
 namespace EasySave.ViewModel
 {

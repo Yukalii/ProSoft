@@ -6,7 +6,6 @@ using EasySave.Model.Storage;
 using EasySave.View;
 using EasySave.ViewModel;
 using EasySave.Model.Observers;
-using System.Windows;
 
 namespace EasySave
 {

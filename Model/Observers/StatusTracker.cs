@@ -13,7 +13,6 @@ namespace EasySave.Model.Observers
         {
             _statusFilePath = statusFilePath;
 
-            // Ensure directory exists
             var directory = Path.GetDirectoryName(_statusFilePath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);

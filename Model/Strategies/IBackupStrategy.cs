@@ -10,7 +10,7 @@ namespace EasySave.Model.Strategies
     {
         /// <summary>
         /// Executes the backup logic for a given job context.
-        /// The context contains source, target, and job metadata.
+        /// The context contains source, target, and job.
         /// </summary>
         void Execute(BackupJobContext context);
     }

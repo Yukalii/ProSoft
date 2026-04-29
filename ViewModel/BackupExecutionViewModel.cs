@@ -1,6 +1,3 @@
-using System.Windows;
-using System.Collections.ObjectModel;
-using System.Windows.Input;
 using EasySave.Model.Backup;
 using EasySave.Model.Observers;
 

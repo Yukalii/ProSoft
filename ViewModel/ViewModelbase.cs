@@ -1,7 +1,4 @@
-﻿using System.ComponentModel;
-using System.Runtime.CompilerServices;
-
-namespace EasySave.ViewModel
+﻿namespace EasySave.ViewModel
 {
     public abstract class ViewModelBase : INotifyPropertyChanged
     {

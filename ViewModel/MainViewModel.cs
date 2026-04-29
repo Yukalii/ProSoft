@@ -2,14 +2,13 @@ using EasySave.Model.Backup;
 using EasySave.Model.Config;
 using EasySave.Model.Logger;
 using EasySave.Localisation;
-using System.Windows.Input;
 
 namespace EasySave.ViewModel
 {
     public class MainViewModel : ViewModelBase
     {
         public BackupJobManager JobManager { get; }
-        public LocalisationService Loc { get; } // ✅ exposé pour le XAML
+        public LocalisationService Loc { get; } 
 
         public JobListViewModel JobListVM { get; }
         public JobEditorViewModel JobEditorVM { get; }
