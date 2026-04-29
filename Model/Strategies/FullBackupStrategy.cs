@@ -1,4 +1,5 @@
 ﻿using EasySave.Model.Backup;
+using EasySave.Model.Encryption;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using System.Diagnostics;
@@ -48,6 +49,13 @@ namespace EasySave.Model.Strategies
 
                 long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
 
+                // Encrypt backup if needed
+                int encryptionTime = 0;
+                if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                {
+                    encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
+                }
+
                 // Log the action
                 logger.LogEntry(new LogEntry
                 {
@@ -56,7 +64,8 @@ namespace EasySave.Model.Strategies
                     SourcePath = sourceFile,
                     DestinationPath = destinationFile,
                     FileSize = fileInfo.Size,
-                    TransferTimeMs = transferTime
+                    TransferTimeMs = transferTime,
+                    EncryptionTimeMs = encryptionTime
                 });
 
                 // Update progress

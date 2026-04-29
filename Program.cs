@@ -44,7 +44,8 @@ namespace EasySave
                 "jobs.json",
                 storage,
                 dynamicLogger,
-                statusTracker
+                statusTracker,
+                config.Config
             );
 
             // === Initialize ViewModels ===

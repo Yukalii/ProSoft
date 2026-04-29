@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using EasySave.Model.Config;
+using System.Text.Json;
 using EasySave.Model.Logger;
 using EasySave.Model.Storage;
 using EasySave.Model.Strategies;
@@ -16,6 +17,7 @@ namespace EasySave.Model.Backup
         private readonly IStorage _storage;
         private readonly ILogger _logger;
         private readonly IBackupObserver _statusObserver;
+        private readonly AppConfig _config;
 
         /// <summary>
         /// Maximum number of backup jobs allowed. Null means no limit.
@@ -30,12 +32,14 @@ namespace EasySave.Model.Backup
             string jobsFilePath,
             IStorage storage,
             ILogger logger,
-            IBackupObserver statusObserver)
+            IBackupObserver statusObserver,
+            AppConfig config)
         {
             _jobsFilePath = jobsFilePath;
             _storage = storage;
             _logger = logger;
             _statusObserver = statusObserver;
+            _config = config;
 
             LoadJobs();
         }
@@ -67,7 +71,8 @@ namespace EasySave.Model.Backup
                     dto.TargetPath,
                     strategy,
                     _storage,
-                    _logger
+                    _logger,
+                    _config
                 );
 
                 job.AttachObserver(_statusObserver);
@@ -113,7 +118,7 @@ namespace EasySave.Model.Backup
                 );
 
             var strategy = CreateStrategy(strategyType);
-            var job = new BackupJob(name, source, target, strategy, _storage, _logger);
+            var job = new BackupJob(name, source, target, strategy, _storage, _logger, _config);
             job.AttachObserver(_statusObserver);
 
             Jobs.Add(job);
