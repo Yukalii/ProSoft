@@ -1,7 +1,8 @@
+using System.Windows;
+using System.Collections.ObjectModel;
+using System.Windows.Input;
 using EasySave.Model.Backup;
 using EasySave.Model.Observers;
-using System.Windows;
-using System.Windows.Input;
 
 namespace EasySave.ViewModel
 {
@@ -9,11 +10,27 @@ namespace EasySave.ViewModel
     {
         private readonly BackupJobManager _jobManager;
 
+        public ObservableCollection<BackupJob> AvailableJobs { get; } = new();
+
         private string _jobName = "";
         public string JobName
         {
             get => _jobName;
-            set => SetProperty(ref _jobName, value); 
+            set => SetProperty(ref _jobName, value);
+        }
+
+        private BackupJob? _selectedJob;
+        public BackupJob? SelectedJob
+        {
+            get => _selectedJob;
+            set
+            {
+                SetProperty(ref _selectedJob, value);
+                _jobName = value?.Name ?? "";
+                OnPropertyChanged(nameof(JobName));
+                CommandManager.InvalidateRequerySuggested(); 
+            }
+        }
 
         private string _state = "Inactive";
         public string State
@@ -26,8 +43,14 @@ namespace EasySave.ViewModel
         public int TotalFiles
         {
             get => _totalFiles;
-            private set => SetProperty(ref _totalFiles, value);
+            private set
+            {
+                SetProperty(ref _totalFiles, value);
+                OnPropertyChanged(nameof(TotalFilesDisplay));
+            }
         }
+
+        public int TotalFilesDisplay => TotalFiles > 0 ? TotalFiles : 1;
 
         private long _totalSize;
         public long TotalSize
@@ -69,9 +92,11 @@ namespace EasySave.ViewModel
         public BackupExecutionViewModel(BackupJobManager jobManager)
         {
             _jobManager = jobManager;
+            RefreshJobs();
+
             StartJobCommand = new RelayCommand(
-                _ => StartJob(JobName),
-                _ => !string.IsNullOrWhiteSpace(JobName)
+                _ => StartJob(_jobName),
+                _ => !string.IsNullOrWhiteSpace(_jobName)
             );
         }
 
@@ -79,6 +104,13 @@ namespace EasySave.ViewModel
         {
             JobName = jobName;
             await Task.Run(() => _jobManager.ExecuteJob(jobName));
+        }
+
+        public void RefreshJobs()
+        {
+            AvailableJobs.Clear();
+            foreach (var job in _jobManager.Jobs)
+                AvailableJobs.Add(job);
         }
 
         public void OnJobUpdated(StatusSnapshot snapshot)

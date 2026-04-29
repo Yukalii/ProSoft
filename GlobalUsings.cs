@@ -7,4 +7,4 @@ global using System.Text.Json.Serialization;
 global using System.Xml.Serialization;
 global using System.Diagnostics;
 global using System.Windows.Input;
-
+global using System.Collections.ObjectModel;

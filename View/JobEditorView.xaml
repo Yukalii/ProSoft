@@ -15,9 +15,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
-                   Text="Créer une sauvegarde"
-                   FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
+        <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
 
         <TextBlock Grid.Row="1" Grid.Column="0" Text="Nom :" VerticalAlignment="Center" Margin="0,0,0,12"/>
         <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>

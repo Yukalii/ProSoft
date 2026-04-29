@@ -32,9 +32,10 @@
 
         <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,12">
             <TextBlock Text="Job à lancer :" VerticalAlignment="Center" Margin="0,0,8,0"/>
-            <TextBox Width="200"
-                     Text="{Binding JobName, UpdateSourceTrigger=PropertyChanged}"
-                     VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <ComboBox Width="200"
+          ItemsSource="{Binding AvailableJobs, Mode=OneWay}"
+          SelectedItem="{Binding JobName}"
+          DisplayMemberPath="Name"/>
             <Button Content="▶ Démarrer" Command="{Binding StartJobCommand}" Padding="12,6"/>
         </StackPanel>
     </Grid>

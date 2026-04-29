@@ -2,7 +2,7 @@ using EasySave.Model.Backup;
 using EasySave.Model.Config;
 using EasySave.Model.Logger;
 using EasySave.Localisation;
-using System.Windows.Input;
+
 
 namespace EasySave.ViewModel
 {
@@ -37,21 +37,42 @@ namespace EasySave.ViewModel
 
             BackupExecutionVM = new BackupExecutionViewModel(jobManager);
 
-            JobListVM = new JobListViewModel(jobManager, jobName =>
-            {
-                BackupExecutionVM.JobName = jobName;
-                CurrentViewModel = BackupExecutionVM;
-            });
+            JobListVM = new JobListViewModel(
+    jobManager,
+    onRunJob: jobName =>
+    {
+        BackupExecutionVM.JobName = jobName;
+        CurrentViewModel = BackupExecutionVM;
+    },
+    onJobDeleted: () => BackupExecutionVM.RefreshJobs(),
+    onJobEdit: job => 
+    {
+        CurrentViewModel = new JobEditorViewModel(jobManager, () =>
+        {
+            JobListVM.RefreshJobs();
+            JobListVM.SelectedJob = null;
+            BackupExecutionVM.RefreshJobs();
+            CurrentViewModel = JobListVM;
+        }, job);
+    }
+);
 
             JobEditorVM = new JobEditorViewModel(jobManager, () =>
             {
                 JobListVM.RefreshJobs();
-                CurrentViewModel = SettingsVM;
+                JobListVM.SelectedJob = null; 
+                BackupExecutionVM.RefreshJobs();
+                CurrentViewModel = JobListVM;
             });
 
             SettingsVM = new SettingsViewModel(localisation, configManager, dynamicLogger);
 
-            ShowJobsCommand = new RelayCommand(_ => CurrentViewModel = JobListVM);
+            ShowJobsCommand = new RelayCommand(_ =>
+            {
+                JobListVM.SelectedJob = null; 
+                CurrentViewModel = JobListVM;
+            });
+
             ShowExecutionCommand = new RelayCommand(_ => CurrentViewModel = BackupExecutionVM);
             ShowSettingsCommand = new RelayCommand(_ => CurrentViewModel = SettingsVM);
             ShowJobEditorCommand = new RelayCommand(_ => CurrentViewModel = JobEditorVM);

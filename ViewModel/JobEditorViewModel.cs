@@ -1,37 +1,67 @@
 using EasySave.Model.Backup;
+using System.Collections.ObjectModel;
+using System.Windows.Input;
 
 namespace EasySave.ViewModel
 {
-    public class JobEditorViewModel : ViewModelBase
+    public class JobListViewModel : ViewModelBase
     {
         private readonly BackupJobManager _jobManager;
-        private readonly Action _onSaved;
+        private readonly Action<string> _onRunJob;
+        private readonly Action? _onJobDeleted;
+        private readonly Action<BackupJob>? _onJobEdit;
 
-        public string Name { get => _name; set => SetProperty(ref _name, value); }
-        public string SourcePath { get => _source; set => SetProperty(ref _source, value); }
-        public string TargetPath { get => _target; set => SetProperty(ref _target, value); }
-        public string SelectedStrategy { get => _strat; set => SetProperty(ref _strat, value); }
+        public ObservableCollection<BackupJob> Jobs { get; } = new();
 
-        private string _name = "", _source = "", _target = "", _strat = "FullBackupStrategy";
-
-        public List<string> Strategies { get; } = new() { "FullBackupStrategy", "DifferentialBackupStrategy" };
-
-        public ICommand SaveCommand { get; }
-        public ICommand CancelCommand { get; }
-
-        public JobEditorViewModel(BackupJobManager jobManager, Action onSaved)
+        private BackupJob? _selectedJob;
+        public BackupJob? SelectedJob
         {
-            _jobManager = jobManager;
-            _onSaved = onSaved;
-
-            SaveCommand = new RelayCommand(
-                _ => { Save(); _onSaved(); },
-                _ => !string.IsNullOrWhiteSpace(Name)
-            );
-
-            CancelCommand = new RelayCommand(_ => _onSaved());
+            get => _selectedJob;
+            set => SetProperty(ref _selectedJob, value);
         }
 
-        public void Save() => _jobManager.AddJob(Name, SourcePath, TargetPath, SelectedStrategy);
+        public ICommand DeleteJobCommand { get; }
+        public ICommand EditJobCommand { get; }
+        public ICommand RunJobCommand { get; }
+
+        public JobListViewModel(BackupJobManager jobManager, Action<string> onRunJob,
+            Action? onJobDeleted = null, Action<BackupJob>? onJobEdit = null)
+        {
+            _jobManager = jobManager;
+            _onRunJob = onRunJob;
+            _onJobDeleted = onJobDeleted;
+            _onJobEdit = onJobEdit;
+
+            RefreshJobs();
+
+            DeleteJobCommand = new RelayCommand(
+                _ =>
+                {
+                    if (SelectedJob == null) return;
+                    _jobManager.DeleteJob(SelectedJob.Name);
+                    Jobs.Remove(SelectedJob);
+                    SelectedJob = null;
+                    _onJobDeleted?.Invoke();
+                },
+                _ => SelectedJob != null
+            );
+
+            EditJobCommand = new RelayCommand(
+                _ => { if (SelectedJob != null) _onJobEdit?.Invoke(SelectedJob); },
+                _ => SelectedJob != null
+            );
+
+            RunJobCommand = new RelayCommand(
+                _ => { if (SelectedJob != null) _onRunJob(SelectedJob.Name); },
+                _ => SelectedJob != null
+            );
+        }
+
+        public void RefreshJobs()
+        {
+            Jobs.Clear();
+            foreach (var job in _jobManager.Jobs)
+                Jobs.Add(job);
+        }
     }
 }

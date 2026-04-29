@@ -35,6 +35,9 @@
             <Button Content="▶ Exécuter"
                     Command="{Binding RunJobCommand}"
                     Padding="12,6"/>
+            <Button Content="✏ Modifier"
+        Command="{Binding EditJobCommand}"
+        Margin="8,0,0,0"/>
         </StackPanel>
     </Grid>
 </UserControl>
