@@ -20,8 +20,15 @@ namespace EasySave.Model.Encryption
                 CreateNoWindow = true
             };
 
-            using var process = Process.Start(psi);
-            process!.WaitForExit();
+            using var process = Process.Start(psi)
+                ?? throw new InvalidOperationException("Failed to start CryptoSoft process.");
+
+            process.WaitForExit();
+
+            if (process.ExitCode < 0)
+                throw new InvalidOperationException(
+                    $"CryptoSoft failed with exit code {process.ExitCode} (0x{process.ExitCode & 0xFFFFFFFF:X8}). " +
+                    $"File: {filePath}");
 
             return process.ExitCode;
         }

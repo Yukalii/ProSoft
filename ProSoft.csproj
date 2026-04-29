@@ -26,12 +26,15 @@
 		<Warning
 		  Condition="!Exists('CryptoSoft\bin\$(Configuration)\net8.0\CryptoSoft.exe')"
 		  Text="CryptoSoft.exe not found — skipping copy. Build CryptoSoft first." />
+		<ItemGroup>
+			<CryptoSoftFiles
+			  Include="CryptoSoft\bin\$(Configuration)\net8.0\CryptoSoft.*"
+			  Condition="Exists('CryptoSoft\bin\$(Configuration)\net8.0\CryptoSoft.exe')" />
+		</ItemGroup>
 		<Copy
-		  Condition="Exists('CryptoSoft\bin\$(Configuration)\net8.0\CryptoSoft.exe')"
-		  SourceFiles="CryptoSoft\bin\$(Configuration)\net8.0\CryptoSoft.exe"
+		  SourceFiles="@(CryptoSoftFiles)"
 		  DestinationFolder="$(OutputPath)"
-		  SkipUnchangedFiles="true"
-		/>
+		  SkipUnchangedFiles="true" />
 	</Target>
 
 </Project>
