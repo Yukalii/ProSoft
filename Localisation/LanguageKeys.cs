@@ -14,7 +14,6 @@ namespace EasySave.Localisation
         public const string Choice = "Choice";
         public const string InvalidChoice = "InvalidChoice";
         public const string SettingsSaved = "SettingsSaved";
-        public const string MaxJobsReached = "MaxJobsReached";
 
         // Backup job management
         public const string ListJobs = "ListJobs";

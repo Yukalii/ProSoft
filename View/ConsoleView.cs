@@ -67,7 +67,6 @@ namespace EasySave.View
 
         /// <summary>
         /// Displays the list of backup jobs and provides options to add, delete, or run a job.
-        /// Disables the add option when the maximum number of jobs is reached.
         /// </summary>
         private void ShowJobList()
         {
@@ -83,15 +82,9 @@ namespace EasySave.View
                     index++;
                 }
 
-                bool canAdd = _mainVM.JobManager.CanAddJob;
-
                 Console.WriteLine();
-                if (canAdd)
-                    Console.WriteLine("A. " + _localisation.Translate(LanguageKeys.AddJob));
-                else
-                    Console.WriteLine("A. " + _localisation.Translate(LanguageKeys.AddJob) +
-                                      $" ({_mainVM.JobManager.Jobs.Count}/{_mainVM.JobManager.MaxJobs} - " +
-                                      _localisation.Translate(LanguageKeys.MaxJobsReached) + ")");
+
+                Console.WriteLine("A. " + _localisation.Translate(LanguageKeys.AddJob));
 
                 Console.WriteLine("D. " + _localisation.Translate(LanguageKeys.DeleteJob));
                 Console.WriteLine("R. " + _localisation.Translate(LanguageKeys.RunJob));
@@ -103,12 +96,6 @@ namespace EasySave.View
                 switch (input)
                 {
                     case "A":
-                        if (!canAdd)
-                        {
-                            Console.WriteLine(_localisation.Translate(LanguageKeys.MaxJobsReached));
-                            Console.ReadKey();
-                            break;
-                        }
                         ShowJobEditor();
                         break;
 
@@ -184,13 +171,6 @@ namespace EasySave.View
 
                 if (Console.ReadLine() != "1") return;
 
-                // Re-check the job limit before allowing another creation
-                if (!_mainVM.JobManager.CanAddJob)
-                {
-                    Console.WriteLine(_localisation.Translate(LanguageKeys.MaxJobsReached));
-                    Console.ReadKey();
-                    return;
-                }
             }
         }
 

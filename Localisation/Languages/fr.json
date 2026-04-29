@@ -30,7 +30,6 @@
   "JobDeleted": "Tâche supprimée.",
   "JobNotFound": "Tâche introuvable.",
   "EnterJobName": "Entrez le nom de la tâche",
-  "MaxJobsReached": "Nombre maximum de tâches atteint",
 
   "StartBackup": "Démarrer la sauvegarde",
   "StopBackup": "Arrêter la sauvegarde",

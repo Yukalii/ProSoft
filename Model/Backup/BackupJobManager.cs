@@ -17,13 +17,6 @@ namespace EasySave.Model.Backup
         private readonly ILogger _logger;
         private readonly IBackupObserver _statusObserver;
 
-        /// <summary>
-        /// Maximum number of backup jobs allowed. Null means no limit.
-        /// </summary>
-        public int? MaxJobs { get; set; } = 5;
-
-        public bool CanAddJob => MaxJobs == null || Jobs.Count < MaxJobs;
-
         public List<BackupJob> Jobs { get; private set; } = new();
 
         public BackupJobManager(
@@ -107,11 +100,6 @@ namespace EasySave.Model.Backup
         /// <exception cref="InvalidOperationException">Thrown when the job limit is reached.</exception>
         public void AddJob(string name, string source, string target, string strategyType)
         {
-            if (!CanAddJob)
-                throw new InvalidOperationException(
-                    $"Cannot add job: maximum of {MaxJobs} jobs reached."
-                );
-
             var strategy = CreateStrategy(strategyType);
             var job = new BackupJob(name, source, target, strategy, _storage, _logger);
             job.AttachObserver(_statusObserver);

@@ -29,7 +29,6 @@
   "JobDeleted": "Job deleted.",
   "JobNotFound": "Job not found.",
   "EnterJobName": "Enter job name",
-  "MaxJobsReached": "Maximum number of jobs reached",
 
   "StartBackup": "Start Backup",
   "StopBackup": "Stop Backup",
