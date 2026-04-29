@@ -1,6 +1,6 @@
 using EasySave.Model.Config;
-using EasySave.Model.Logging;
 using EasySave.Localisation;
+using EasySave.Model.Logger;
 
 namespace EasySave.ViewModel
 {

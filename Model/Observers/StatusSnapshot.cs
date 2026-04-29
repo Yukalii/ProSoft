@@ -1,5 +1,3 @@
-using System;
-
 namespace EasySave.Model.Observers
 {
     /// <summary>

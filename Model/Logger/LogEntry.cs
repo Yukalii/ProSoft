@@ -1,4 +1,3 @@
-using System;
 using System.Xml.Serialization;
 
 namespace EasySave.Model.Logger

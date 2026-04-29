@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-using System;
-using System.Diagnostics;
-using System.IO;
-using EasySave.Model.Backup;
+﻿using EasySave.Model.Backup;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
-using EasySave.Model.Storage;
+using System.Diagnostics;
 
 namespace EasySave.Model.Strategies
 {

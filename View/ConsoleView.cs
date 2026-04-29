@@ -1,6 +1,5 @@
 using EasySave.Localisation;
 using EasySave.ViewModel;
-using EasySave.Model.Backup;
 
 namespace EasySave.View
 {
