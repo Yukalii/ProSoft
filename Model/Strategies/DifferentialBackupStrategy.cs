@@ -1,9 +1,10 @@
-﻿using System;
-using System.Diagnostics;
-using EasySave.Model.Backup;
+﻿using EasySave.Model.Backup;
+using EasySave.Model.Encryption;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
+using System;
+using System.Diagnostics;
 
 namespace EasySave.Model.Strategies
 {
@@ -58,6 +59,12 @@ namespace EasySave.Model.Strategies
 
                     long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
 
+                    int encryptionTime = 0;
+                    if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                    {
+                        encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
+                    }
+
                     logger.LogEntry(new LogEntry
                     {
                         Timestamp = DateTime.Now,
@@ -65,7 +72,8 @@ namespace EasySave.Model.Strategies
                         SourcePath = sourceFile,
                         DestinationPath = destinationFile,
                         FileSize = sourceInfo.Size,
-                        TransferTimeMs = transferTime
+                        TransferTimeMs = transferTime,
+                        EncryptionTimeMs = encryptionTime
                     });
                 }
 

@@ -313,11 +313,14 @@ namespace EasySave.View
                 // Show current values so the user knows what is active
                 Console.WriteLine($"[{_localisation.Translate(LanguageKeys.Language)}: {_settingsVM.SelectedLanguage.ToUpper()}]");
                 Console.WriteLine($"[{_localisation.Translate(LanguageKeys.LogFormat)}: {_settingsVM.SelectedLogFormat.ToUpper()}]");
+                Console.WriteLine($"[Encryption key: {_settingsVM.CryptoSoftKey}]");
+                Console.WriteLine($"[Encrypted extensions: {string.Join(", ", _settingsVM.EncryptedExtensions)}]");
                 Console.WriteLine();
 
                 Console.WriteLine("1. " + _localisation.Translate(LanguageKeys.Language));
                 Console.WriteLine("2. " + _localisation.Translate(LanguageKeys.LogFormat));
-                Console.WriteLine("3. " + _localisation.Translate(LanguageKeys.Back));
+                Console.WriteLine("3. Encryption");
+                Console.WriteLine("4. " + _localisation.Translate(LanguageKeys.Back));
                 Console.Write(_localisation.Translate(LanguageKeys.Choice) + ": ");
 
                 string? input = Console.ReadLine();
@@ -333,6 +336,10 @@ namespace EasySave.View
                         break;
 
                     case "3":
+                        ShowEncryptionSettings();
+                        break;
+
+                    case "4":
                         return;
 
                     default:
@@ -421,6 +428,103 @@ namespace EasySave.View
                     Console.WriteLine(_localisation.Translate(LanguageKeys.InvalidChoice));
                     Console.ReadKey();
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Sub-menu for changing the encryption key and the list of encrypted extensions.
+        /// </summary>
+        private void ShowEncryptionSettings()
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("=== Encryption Settings ===");
+                Console.WriteLine($"[Key: {_settingsVM.CryptoSoftKey}]");
+                Console.WriteLine($"[Extensions: {string.Join(", ", _settingsVM.EncryptedExtensions)}]");
+                Console.WriteLine();
+                Console.WriteLine("1. Change encryption key");
+                Console.WriteLine("2. Add extension");
+                Console.WriteLine("3. Remove extension");
+                Console.WriteLine("4. " + _localisation.Translate(LanguageKeys.Back));
+                Console.Write(_localisation.Translate(LanguageKeys.Choice) + ": ");
+
+                switch (Console.ReadLine())
+                {
+                    case "1":
+                        Console.Write("New key: ");
+                        string? key = Console.ReadLine();
+                        if (!string.IsNullOrWhiteSpace(key))
+                        {
+                            _settingsVM.CryptoSoftKey = key;
+                            _settingsVM.SaveSettings();
+                            Console.WriteLine("Key updated.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Key cannot be empty.");
+                        }
+                        Console.ReadKey();
+                        break;
+
+                    case "2":
+                        Console.Write("Extension to add (e.g. .docx): ");
+                        string? extAdd = Console.ReadLine();
+                        if (!string.IsNullOrWhiteSpace(extAdd))
+                        {
+                            // Normalise: ensure it starts with a dot
+                            if (!extAdd.StartsWith('.')) extAdd = "." + extAdd;
+
+                            if (_settingsVM.EncryptedExtensions.Contains(extAdd, StringComparer.OrdinalIgnoreCase))
+                            {
+                                Console.WriteLine($"{extAdd} is already in the list.");
+                            }
+                            else
+                            {
+                                _settingsVM.EncryptedExtensions.Add(extAdd);
+                                _settingsVM.SaveSettings();
+                                Console.WriteLine($"{extAdd} added.");
+                            }
+                        }
+                        Console.ReadKey();
+                        break;
+
+                    case "3":
+                        if (_settingsVM.EncryptedExtensions.Count == 0)
+                        {
+                            Console.WriteLine("No extensions configured.");
+                            Console.ReadKey();
+                            break;
+                        }
+                        Console.WriteLine("Extensions:");
+                        for (int i = 0; i < _settingsVM.EncryptedExtensions.Count; i++)
+                            Console.WriteLine($"  {i + 1}. {_settingsVM.EncryptedExtensions[i]}");
+                        Console.Write("Number to remove (or B to cancel): ");
+                        string? removeInput = Console.ReadLine();
+                        if (removeInput?.ToUpper() == "B") break;
+                        if (int.TryParse(removeInput, out int idx) &&
+                            idx >= 1 && idx <= _settingsVM.EncryptedExtensions.Count)
+                        {
+                            string removed = _settingsVM.EncryptedExtensions[idx - 1];
+                            _settingsVM.EncryptedExtensions.RemoveAt(idx - 1);
+                            _settingsVM.SaveSettings();
+                            Console.WriteLine($"{removed} removed.");
+                        }
+                        else
+                        {
+                            Console.WriteLine(_localisation.Translate(LanguageKeys.InvalidChoice));
+                        }
+                        Console.ReadKey();
+                        break;
+
+                    case "4":
+                        return;
+
+                    default:
+                        Console.WriteLine(_localisation.Translate(LanguageKeys.InvalidChoice));
+                        Console.ReadKey();
+                        break;
+                }
             }
         }
     }

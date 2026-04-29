@@ -26,6 +26,18 @@ namespace EasySave.ViewModel
             set => _configManager.Config.LogFormat = value;
         }
 
+        public string CryptoSoftKey
+        {
+            get => _configManager.Config.CryptoSoftKey;
+            set => _configManager.Config.CryptoSoftKey = value;
+        }
+
+        public List<string> EncryptedExtensions
+        {
+            get => _configManager.Config.EncryptedExtensions;
+            set => _configManager.Config.EncryptedExtensions = value;
+        }
+
         public SettingsViewModel(
             LocalisationService localisation,
             ConfigManager configManager,
