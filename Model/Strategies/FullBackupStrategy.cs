@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-
-using System;
-using System.Diagnostics;
 using System.IO;
 using EasySave.Model.Backup;
 using EasySave.Model.Logger;

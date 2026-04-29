@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
-using System.IO;
 using EasySave.Model.Backup;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
