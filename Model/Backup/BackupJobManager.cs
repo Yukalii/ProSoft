@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using EasySave.Model.Config;
 using EasySave.Model.Logger;
 using EasySave.Model.Storage;
 using EasySave.Model.Strategies;

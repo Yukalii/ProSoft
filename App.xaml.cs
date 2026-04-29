@@ -33,7 +33,8 @@ namespace EasySave
                 Path.Combine(baseDir, "jobs.json"),
                 storage,
                 dynamicLogger,
-                new NullBackupObserver()
+                new NullBackupObserver(),
+                configManager.Config
             );
 
             var mainVM = new MainViewModel(jobManager, localisation, configManager, dynamicLogger);
