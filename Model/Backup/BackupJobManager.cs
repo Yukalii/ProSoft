@@ -5,7 +5,6 @@ using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 using EasySave.Model.Strategies;
 using EasySave.Model.BusinessSoftware;
-using System.Threading;
 
 namespace EasySave.Model.Backup
 
@@ -38,8 +37,7 @@ namespace EasySave.Model.Backup
             IStorage storage,
             ILogger logger,
             IBackupObserver statusObserver,
-            AppConfig config)
-            IBackupObserver statusObserver,
+            AppConfig config,
             IBusinessSoftwareManager businessSoftware)
         {
             _jobsFilePath = jobsFilePath;
