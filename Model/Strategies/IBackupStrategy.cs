@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using EasySave.Model.Backup;
+﻿using EasySave.Model.Backup;
 
 namespace EasySave.Model.Strategies
 {

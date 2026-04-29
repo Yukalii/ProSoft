@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using EasySave.Model.Backup;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
@@ -24,7 +23,6 @@ namespace EasySave.Model.Strategies
             long totalSize = 0;
             int totalFiles = 0;
 
-            // Pre-calculate totals for progress reporting
             foreach (var file in allFiles)
             {
                 var info = storage.GetFileInfo(file);

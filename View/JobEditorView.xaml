@@ -1,0 +1,42 @@
+<UserControl x:Class="EasySave.View.JobEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="24" MaxWidth="500" HorizontalAlignment="Left">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="130"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
+                   Text="Créer une sauvegarde"
+                   FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Nom :" VerticalAlignment="Center" Margin="0,0,0,12"/>
+        <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Source :" VerticalAlignment="Center" Margin="0,0,0,12"/>
+        <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding SourcePath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Cible :" VerticalAlignment="Center" Margin="0,0,0,12"/>
+        <TextBox   Grid.Row="3" Grid.Column="1" Text="{Binding TargetPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Stratégie :" VerticalAlignment="Center" Margin="0,0,0,20"/>
+        <ComboBox  Grid.Row="4" Grid.Column="1"
+                   ItemsSource="{Binding Strategies}"
+                   SelectedItem="{Binding SelectedStrategy}"
+                   Margin="0,0,0,20"/>
+
+        <StackPanel Grid.Row="5" Grid.ColumnSpan="2" Orientation="Horizontal">
+            <Button Content="💾 Sauvegarder" Command="{Binding SaveCommand}"   Padding="12,6" Margin="0,0,8,0"/>
+            <Button Content="↩ Annuler"      Command="{Binding CancelCommand}" Padding="12,6"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

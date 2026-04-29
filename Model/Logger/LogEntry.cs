@@ -1,5 +1,3 @@
-using System.Xml.Serialization;
-
 namespace EasySave.Model.Logger
 {
     [XmlRoot("LogEntry")]

@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+﻿
 using EasySave.Model.Logger;
 using EasySave.Model.Storage;
 using EasySave.Model.Strategies;
@@ -15,7 +15,7 @@ namespace EasySave.Model.Backup
         private readonly string _jobsFilePath;
         private readonly IStorage _storage;
         private readonly ILogger _logger;
-        private readonly IBackupObserver _statusObserver;
+        private IBackupObserver _statusObserver;
 
         /// <summary>
         /// Maximum number of backup jobs allowed. Null means no limit.
@@ -149,6 +149,17 @@ namespace EasySave.Model.Backup
                 "DifferentialBackupStrategy" => new DifferentialBackupStrategy(),
                 _ => throw new InvalidOperationException($"Unknown strategy: {type}")
             };
+        }
+        // Dans BackupJobManager.cs
+        public void RegisterObserver(IBackupObserver observer)
+        {
+            // Mettre à jour le champ
+            // (nécessite de retirer readonly)
+            _statusObserver = observer;
+
+            // Ré-attacher aux jobs déjà chargés
+            foreach (var job in Jobs)
+                job.AttachObserver(observer);
         }
     }
 

@@ -2,25 +2,45 @@ using EasySave.Model.Backup;
 
 namespace EasySave.ViewModel
 {
-    public class JobListViewModel
+    public class JobListViewModel : ViewModelBase
     {
         private readonly BackupJobManager _jobManager;
+        private readonly Action<string> _onRunJob;
 
         public List<BackupJob> Jobs => _jobManager.Jobs;
 
-        public JobListViewModel(BackupJobManager jobManager)
+        private BackupJob? _selectedJob;
+        public BackupJob? SelectedJob
         {
-            _jobManager = jobManager;
+            get => _selectedJob;
+            set => SetProperty(ref _selectedJob, value);
         }
 
-        public void RefreshJobs()
+        public ICommand DeleteJobCommand { get; }
+        public ICommand RunJobCommand { get; }
+
+        public JobListViewModel(BackupJobManager jobManager, Action<string> onRunJob)
         {
-            // Nothing special for console, Jobs is always up to date
+            _jobManager = jobManager;
+            _onRunJob = onRunJob;
+
+            DeleteJobCommand = new RelayCommand(
+                _ => { if (SelectedJob != null) { DeleteJob(SelectedJob.Name); OnPropertyChanged(nameof(Jobs)); } },
+                _ => SelectedJob != null
+            );
+
+            RunJobCommand = new RelayCommand(
+                _ => { if (SelectedJob != null) _onRunJob(SelectedJob.Name); },
+                _ => SelectedJob != null
+            );
         }
+
+        public void RefreshJobs() => OnPropertyChanged(nameof(Jobs));
 
         public void DeleteJob(string jobName)
         {
             _jobManager.DeleteJob(jobName);
+            OnPropertyChanged(nameof(Jobs));
         }
     }
 }
