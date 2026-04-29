@@ -14,22 +14,27 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
-                   Text="Paramètres" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
+                   Text="{Binding DataContext.Loc[settings_title], RelativeSource={RelativeSource AncestorType=Window}}"
+                   FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
 
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="Langue :" VerticalAlignment="Center" Margin="0,0,0,12"/>
+        <TextBlock Grid.Row="1" Grid.Column="0"
+                   Text="{Binding DataContext.Loc[settings_language], RelativeSource={RelativeSource AncestorType=Window}}"
+                   VerticalAlignment="Center" Margin="0,0,0,12"/>
         <ComboBox  Grid.Row="1" Grid.Column="1"
                    ItemsSource="{Binding Languages}"
                    SelectedItem="{Binding SelectedLanguage}"
                    Margin="0,0,0,12"/>
 
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="Format de log :" VerticalAlignment="Center" Margin="0,0,0,20"/>
+        <TextBlock Grid.Row="2" Grid.Column="0"
+                   Text="{Binding DataContext.Loc[settings_logformat], RelativeSource={RelativeSource AncestorType=Window}}"
+                   VerticalAlignment="Center" Margin="0,0,0,20"/>
         <ComboBox  Grid.Row="2" Grid.Column="1"
                    ItemsSource="{Binding LogFormats}"
                    SelectedItem="{Binding SelectedLogFormat}"
                    Margin="0,0,0,20"/>
 
         <Button Grid.Row="3" Grid.ColumnSpan="2"
-                Content="💾 Sauvegarder"
+                Content="{Binding DataContext.Loc[settings_save], RelativeSource={RelativeSource AncestorType=Window}}"
                 Command="{Binding SaveCommand}"
                 HorizontalAlignment="Left" Padding="12,6"/>
     </Grid>

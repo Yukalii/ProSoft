@@ -6,7 +6,7 @@ namespace EasySave.ViewModel
     {
         private readonly BackupJobManager _jobManager;
         private readonly Action _onSaved;
-        private readonly string? _originalName; //
+        private readonly string? _originalName;
 
         public string Name { get => _name; set => SetProperty(ref _name, value); }
         public string SourcePath { get => _source; set => SetProperty(ref _source, value); }

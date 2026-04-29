@@ -150,14 +150,10 @@ namespace EasySave.Model.Backup
                 _ => throw new InvalidOperationException($"Unknown strategy: {type}")
             };
         }
-        // Dans BackupJobManager.cs
         public void RegisterObserver(IBackupObserver observer)
         {
-            // Mettre à jour le champ
-            // (nécessite de retirer readonly)
             _statusObserver = observer;
 
-            // Ré-attacher aux jobs déjà chargés
             foreach (var job in Jobs)
                 job.AttachObserver(observer);
         }

@@ -8,35 +8,39 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Exécution" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
+        <TextBlock Grid.Row="0"
+                   Text="{Binding DataContext.Loc[exec_title], RelativeSource={RelativeSource AncestorType=Window}}"
+                   FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
 
         <StackPanel Grid.Row="1" Margin="0,0,0,16">
-            <TextBlock Text="{Binding JobName,        Mode=OneWay, StringFormat='Job : {0}'}"/>
-            <TextBlock Text="{Binding State,          Mode=OneWay, StringFormat='État : {0}'}"/>
-            <TextBlock Text="{Binding TotalFiles,     Mode=OneWay, StringFormat='Total fichiers : {0}'}"/>
-            <TextBlock Text="{Binding ProcessedFiles, Mode=OneWay, StringFormat='Traités : {0}'}"/>
-            <TextBlock Text="{Binding ProcessedSize,  Mode=OneWay, StringFormat='Taille traitée : {0} octets'}"/>
+            <TextBlock Text="{Binding JobName,        Mode=OneWay, StringFormat={}{0}}"/>
+            <TextBlock Text="{Binding State,          Mode=OneWay}"/>
+            <TextBlock Text="{Binding TotalFiles,     Mode=OneWay}"/>
+            <TextBlock Text="{Binding ProcessedFiles, Mode=OneWay}"/>
+            <TextBlock Text="{Binding ProcessedSize,  Mode=OneWay}"/>
         </StackPanel>
 
         <ProgressBar Grid.Row="2" Height="20" Margin="0,0,0,8"
                      Minimum="0"
-                     Maximum="{Binding TotalFiles,     Mode=OneWay}"
-                     Value="{Binding ProcessedFiles,   Mode=OneWay}"/>
+                     Maximum="{Binding TotalFilesDisplay, Mode=OneWay}"
+                     Value="{Binding ProcessedFiles, Mode=OneWay}"/>
 
         <TextBlock Grid.Row="3"
-                   Text="{Binding CurrentSourceFile, Mode=OneWay, StringFormat='Fichier actuel : {0}'}"
+                   Text="{Binding CurrentSourceFile, Mode=OneWay}"
                    TextTrimming="CharacterEllipsis" Margin="0,0,0,16"/>
 
         <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,12">
-            <TextBlock Text="Job à lancer :" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <TextBlock Text="{Binding DataContext.Loc[exec_job_label], RelativeSource={RelativeSource AncestorType=Window}}"
+                       VerticalAlignment="Center" Margin="0,0,8,0"/>
             <ComboBox Width="200"
-          ItemsSource="{Binding AvailableJobs, Mode=OneWay}"
-          SelectedItem="{Binding JobName}"
-          DisplayMemberPath="Name"/>
-            <Button Content="▶ Démarrer" Command="{Binding StartJobCommand}" Padding="12,6"/>
+                      ItemsSource="{Binding AvailableJobs, Mode=OneWay}"
+                      SelectedItem="{Binding SelectedJob}"
+                      DisplayMemberPath="Name"
+                      VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <Button Content="{Binding DataContext.Loc[exec_start], RelativeSource={RelativeSource AncestorType=Window}}"
+                    Command="{Binding StartJobCommand}" Padding="12,6"/>
         </StackPanel>
     </Grid>
 </UserControl>

@@ -8,7 +8,8 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Liste des sauvegardes" FontSize="18" FontWeight="Bold" Margin="0,0,0,16"/>
+        <TextBlock Text="{Binding DataContext.Loc[jobs_title], RelativeSource={RelativeSource AncestorType=Window}}"
+                   FontSize="18" FontWeight="Bold" Margin="0,0,0,16"/>
 
         <ListView Grid.Row="1"
                   ItemsSource="{Binding Jobs}"
@@ -16,28 +17,27 @@
                   BorderThickness="1">
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="Nom"       Width="200" DisplayMemberBinding="{Binding Name}"/>
-                    <GridViewColumn Header="Source"    Width="220" DisplayMemberBinding="{Binding SourcePath}"/>
-                    <GridViewColumn Header="Cible"     Width="220" DisplayMemberBinding="{Binding TargetPath}"/>
-                    <GridViewColumn Header="Stratégie" Width="180" DisplayMemberBinding="{Binding StrategyName}"/>
+                    <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_name],     RelativeSource={RelativeSource AncestorType=Window}}" Width="200" DisplayMemberBinding="{Binding Name}"/>
+                    <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_source],   RelativeSource={RelativeSource AncestorType=Window}}" Width="220" DisplayMemberBinding="{Binding SourcePath}"/>
+                    <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_target],   RelativeSource={RelativeSource AncestorType=Window}}" Width="220" DisplayMemberBinding="{Binding TargetPath}"/>
+                    <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_strategy], RelativeSource={RelativeSource AncestorType=Window}}" Width="180" DisplayMemberBinding="{Binding StrategyName}"/>
                 </GridView>
             </ListView.View>
         </ListView>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,16,0,0">
-            <Button Content="➕ Ajouter"
-                    Command="{Binding DataContext.ShowJobEditorCommand,
-                              RelativeSource={RelativeSource AncestorType=Window}}"
+            <Button Content="{Binding DataContext.Loc[jobs_add], RelativeSource={RelativeSource AncestorType=Window}}"
+                    Command="{Binding DataContext.ShowJobEditorCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     Padding="12,6" Margin="0,0,8,0"/>
-            <Button Content="🗑 Supprimer"
+            <Button Content="{Binding DataContext.Loc[jobs_delete], RelativeSource={RelativeSource AncestorType=Window}}"
                     Command="{Binding DeleteJobCommand}"
                     Padding="12,6" Margin="0,0,8,0"/>
-            <Button Content="▶ Exécuter"
+            <Button Content="{Binding DataContext.Loc[jobs_run], RelativeSource={RelativeSource AncestorType=Window}}"
                     Command="{Binding RunJobCommand}"
+                    Padding="12,6" Margin="0,0,8,0"/>
+            <Button Content="{Binding DataContext.Loc[jobs_edit], RelativeSource={RelativeSource AncestorType=Window}}"
+                    Command="{Binding EditJobCommand}"
                     Padding="12,6"/>
-            <Button Content="✏ Modifier"
-        Command="{Binding EditJobCommand}"
-        Margin="8,0,0,0"/>
         </StackPanel>
     </Grid>
 </UserControl>
