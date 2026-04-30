@@ -1,16 +1,19 @@
 ﻿using System.Text.Json;
 using EasySave.Model.Config;
 using EasySave.Model.Logger;
+using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 using EasySave.Model.Strategies;
-using EasySave.Model.Observers;
+using EasySave.Model.BusinessSoftware;
 
 namespace EasySave.Model.Backup
+
 {
     /// <summary>
     /// Manages the list of backup jobs, handles persistence,
     /// and provides methods to execute jobs.
     /// </summary>
+
     public class BackupJobManager
     {
         private readonly string _jobsFilePath;
@@ -18,28 +21,33 @@ namespace EasySave.Model.Backup
         private readonly ILogger _logger;
         private IBackupObserver _statusObserver;
         private readonly AppConfig _config;
+        private readonly IBusinessSoftwareManager _businessSoftware;
 
         /// <summary>
         /// Maximum number of backup jobs allowed. Null means no limit.
         /// </summary>
-        public int? MaxJobs { get; set; } = 5;
+        public int? MaxJobs { get; set; } = null;
 
         public bool CanAddJob => MaxJobs == null || Jobs.Count < MaxJobs;
 
         public List<BackupJob> Jobs { get; private set; } = new();
+
+        private readonly HashSet<string> _waitingJobs = new HashSet<string>();
 
         public BackupJobManager(
             string jobsFilePath,
             IStorage storage,
             ILogger logger,
             IBackupObserver statusObserver,
-            AppConfig config)
+            AppConfig config,
+            IBusinessSoftwareManager businessSoftware)
         {
             _jobsFilePath = jobsFilePath;
             _storage = storage;
             _logger = logger;
             _statusObserver = statusObserver;
             _config = config;
+            _businessSoftware = businessSoftware;
 
             LoadJobs();
         }
@@ -137,10 +145,34 @@ namespace EasySave.Model.Backup
         /// <summary>
         /// Executes a job by name.
         /// </summary>
-        public void ExecuteJob(string name)
+        public async Task ExecuteJob(string name)
         {
-            var job = Jobs.Find(j => j.Name == name);
-            job?.Execute();
+            lock (_waitingJobs)
+            {
+                if (_waitingJobs.Contains(name))
+                {
+                    return;
+                }
+                _waitingJobs.Add(name);
+            }
+            try
+            {
+                while (_businessSoftware.SoftwareIsRunning())
+                {
+                    Debug.WriteLine("open");
+                    await Task.Delay(2000);
+                }
+                Debug.WriteLine("close");
+                var job = Jobs.Find(j => j.Name == name);
+                job?.Execute();
+            }
+            finally
+            {
+                lock (_waitingJobs)
+                {
+                    _waitingJobs.Remove(name);
+                }
+            }
         }
 
         /// <summary>

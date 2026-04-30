@@ -35,6 +35,16 @@ namespace EasySave.ViewModel
             }
         }
 
+        public string BusinessApp
+        {
+            get => _configManager.Config.BusinessApp;
+            set
+            {
+                _configManager.Config.BusinessApp = value;
+                OnPropertyChanged();
+            }
+        }
+
         public string CryptoSoftKey
         {
             get => _configManager.Config.CryptoSoftKey;

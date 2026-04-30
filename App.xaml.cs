@@ -6,6 +6,7 @@ using EasySave.Model.Storage;
 using EasySave.View;
 using EasySave.ViewModel;
 using EasySave.Model.Observers;
+using EasySave.Model.BusinessSoftware;
 
 namespace EasySave
 {
@@ -28,13 +29,14 @@ namespace EasySave
             );
             var dynamicLogger = new DynamicLogger(baseLogger);
             var storage = new LocalStorage();
-
+            var businessSoftware = new BusinessSoftwareManager(configManager);
             var jobManager = new BackupJobManager(
                 Path.Combine(baseDir, "jobs.json"),
                 storage,
                 dynamicLogger,
                 new NullBackupObserver(),
-                configManager.Config
+                configManager.Config,
+                businessSoftware
             );
 
             var mainVM = new MainViewModel(jobManager, localisation, configManager, dynamicLogger);

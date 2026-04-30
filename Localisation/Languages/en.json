@@ -35,6 +35,7 @@
     "settings_title": "Settings",
     "settings_language": "Language :",
     "settings_logformat": "Log format :",
+    "settings_businessapp": "Buisness Application",
     "settings_cryptokey": "Encryption key :",
     "settings_extensions": "Encrypted extensions :",
     "settings_add_extension": "➕ Add",
