@@ -1,4 +1,5 @@
-﻿using EasySave.Model.Logger;
+﻿using EasySave.Model.Config;
+using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 
@@ -43,13 +44,19 @@ namespace EasySave.Model.Backup
         /// </summary>
         public string JobName { get; }
 
+        /// <summary>
+        /// Config object providing access to encryption settings.
+        /// </summary>
+        public AppConfig Config { get; }
+
         public BackupJobContext(
             string jobName,
             string sourcePath,
             string targetPath,
             IStorage storage,
             ILogger logger,
-            IReadOnlyList<IBackupObserver> observers)
+            IReadOnlyList<IBackupObserver> observers,
+            AppConfig config)
         {
             JobName = jobName;
             SourcePath = sourcePath;
@@ -57,6 +64,7 @@ namespace EasySave.Model.Backup
             Storage = storage;
             Logger = logger;
             Observers = observers;
+            Config = config;
         }
     }
 }

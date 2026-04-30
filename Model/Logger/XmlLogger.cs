@@ -1,6 +1,4 @@
-﻿using System.Xml.Serialization;
-
-namespace EasySave.Model.Logger
+﻿namespace EasySave.Model.Logger
 {
     /// <summary>
     /// Writes log entries to a daily XML file.

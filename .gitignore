@@ -1,5 +1,6 @@
 .vs/
 bin/
+CryptoSoft/bin/
 obj/
+CryptoSoft/obj/
 config.json
-ProSoft.sln

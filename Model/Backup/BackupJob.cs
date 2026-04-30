@@ -1,4 +1,5 @@
-﻿using EasySave.Model.Logger;
+﻿using EasySave.Model.Config;
+using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 using EasySave.Model.Strategies;
@@ -15,11 +16,13 @@ namespace EasySave.Model.Backup
         public string Name { get; }
         public string SourcePath { get; }
         public string TargetPath { get; }
+        public string StrategyName => Strategy.GetType().Name;
         public IBackupStrategy Strategy { get; }
 
         private readonly IStorage _storage;
         private readonly ILogger _logger;
         private readonly List<IBackupObserver> _observers;
+        private readonly AppConfig _config;
 
         public BackupJob(
             string name,
@@ -27,7 +30,8 @@ namespace EasySave.Model.Backup
             string targetPath,
             IBackupStrategy strategy,
             IStorage storage,
-            ILogger logger)
+            ILogger logger,
+            AppConfig config)
         {
             Name = name;
             SourcePath = sourcePath;
@@ -36,6 +40,7 @@ namespace EasySave.Model.Backup
             _storage = storage;
             _logger = logger;
             _observers = new List<IBackupObserver>();
+            _config = config;
         }
 
         /// <summary>
@@ -75,7 +80,8 @@ namespace EasySave.Model.Backup
                 TargetPath,
                 _storage,
                 _logger,
-                _observers);
+                _observers,
+                _config);
 
             Strategy.Execute(context);
         }
