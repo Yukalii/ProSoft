@@ -46,9 +46,10 @@
                    Margin="0,0,0,20"/> 
 
         <Button Grid.Row="4" Grid.ColumnSpan="2"
-                   Text="{Binding DataContext.Loc[settings_cryptokey],
+                   Content="{Binding DataContext.Loc[settings_cryptokey],
                           RelativeSource={RelativeSource AncestorType=Window}}"
                    VerticalAlignment="Center" Margin="0,0,0,12"/>
+        
         <TextBox   Grid.Row="3" Grid.Column="1"
                    Text="{Binding CryptoSoftKey, UpdateSourceTrigger=PropertyChanged}"
                    Padding="4,3" Margin="0,0,0,12"/>
