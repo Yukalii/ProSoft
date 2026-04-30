@@ -15,6 +15,8 @@ namespace EasySave.Model.Config
         public string CryptoSoftKey { get; set; } = "secretKey";
         public List<string> EncryptedExtensions { get; set; } = [".pdf", ".txt", ".png"];
 
+        public string BusinessApp { get; set; } = "CalculatorApp";
+
         /// <summary>
         /// Creates a default configuration used when no config file exists.
         /// </summary>

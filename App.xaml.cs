@@ -29,7 +29,7 @@ namespace EasySave
             );
             var dynamicLogger = new DynamicLogger(baseLogger);
             var storage = new LocalStorage();
-            var businessSoftware = new BusinessSoftwareManager();
+            var businessSoftware = new BusinessSoftwareManager(configManager);
             var jobManager = new BackupJobManager(
                 Path.Combine(baseDir, "jobs.json"),
                 storage,

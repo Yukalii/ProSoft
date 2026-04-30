@@ -32,6 +32,8 @@ namespace EasySave.Model.Backup
 
         public List<BackupJob> Jobs { get; private set; } = new();
 
+        private readonly HashSet<string> _waitingJobs = new HashSet<string>();
+
         public BackupJobManager(
             string jobsFilePath,
             IStorage storage,
@@ -145,14 +147,32 @@ namespace EasySave.Model.Backup
         /// </summary>
         public async Task ExecuteJob(string name)
         {
-            while (_businessSoftware.SoftwareIsRunning())
+            lock (_waitingJobs)
             {
-                Debug.WriteLine("open");
-                await Task.Delay(2000);
+                if (_waitingJobs.Contains(name))
+                {
+                    return;
+                }
+                _waitingJobs.Add(name);
             }
-            Debug.WriteLine("close");
-            var job = Jobs.Find(j => j.Name == name);
-            job?.Execute();
+            try
+            {
+                while (_businessSoftware.SoftwareIsRunning())
+                {
+                    Debug.WriteLine("open");
+                    await Task.Delay(2000);
+                }
+                Debug.WriteLine("close");
+                var job = Jobs.Find(j => j.Name == name);
+                job?.Execute();
+            }
+            finally
+            {
+                lock (_waitingJobs)
+                {
+                    _waitingJobs.Remove(name);
+                }
+            }
         }
 
         /// <summary>

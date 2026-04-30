@@ -7,6 +7,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="150"/>
@@ -33,7 +34,15 @@
                    SelectedItem="{Binding SelectedLogFormat}"
                    Margin="0,0,0,20"/>
 
-        <Button Grid.Row="3" Grid.ColumnSpan="2"
+        <TextBlock Grid.Row="3" Grid.Column="0"
+                   Text="{Binding DataContext.Loc[settings_businessapp], RelativeSource={RelativeSource AncestorType=Window}}"
+                   VerticalAlignment="Center" Margin="0,0,0,20"/>
+        <TextBox Grid.Row="3" Grid.Column="1"
+                   Text="{Binding BusinessApp, UpdateSourceTrigger=PropertyChanged}"
+                   VerticalAlignment="Center"
+                   Margin="0,0,0,20"/> 
+
+        <Button Grid.Row="4" Grid.ColumnSpan="2"
                 Content="{Binding DataContext.Loc[settings_save], RelativeSource={RelativeSource AncestorType=Window}}"
                 Command="{Binding SaveCommand}"
                 HorizontalAlignment="Left" Padding="12,6"/>
