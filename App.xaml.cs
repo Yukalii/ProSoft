@@ -16,6 +16,8 @@ namespace EasySave
         {
             base.OnStartup(e);
 
+            IBackupObserver statusTracker = new StatusTracker("statusTracker.json");
+
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 
             var configManager = new ConfigManager(Path.Combine(baseDir, "config.json"));
@@ -34,7 +36,7 @@ namespace EasySave
                 Path.Combine(baseDir, "jobs.json"),
                 storage,
                 dynamicLogger,
-                new NullBackupObserver(),
+                statusTracker,
                 configManager.Config,
                 businessSoftware
             );
