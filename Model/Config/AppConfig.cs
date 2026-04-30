@@ -11,6 +11,11 @@ namespace EasySave.Model.Config
         public string LogFormat { get; set; } = "json"; // "json" or "xml"
         public string StatusFilePath { get; set; } = "status.json";
         public string DefaultBackupLocation { get; set; } = "Backups";
+        public string CryptoSoftPath { get; set; } = "CryptoSoft.exe";
+        public string CryptoSoftKey { get; set; } = "secretKey";
+        public List<string> EncryptedExtensions { get; set; } = [".pdf", ".txt", ".png"];
+
+        public string BusinessApp { get; set; } = "CalculatorApp";
 
         /// <summary>
         /// Creates a default configuration used when no config file exists.
@@ -23,7 +28,10 @@ namespace EasySave.Model.Config
                 LogDirectory = "Logs",
                 LogFormat = "json",
                 StatusFilePath = "status.json",
-                DefaultBackupLocation = "Backups"
+                DefaultBackupLocation = "Backups",
+                CryptoSoftPath = "CryptoSoft.exe",
+                CryptoSoftKey = "secretKey",
+                EncryptedExtensions = [".pdf", ".txt", ".png"]
             };
         }
     }

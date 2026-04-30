@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace EasySave.Model.Logger
 {
     public class JsonLogger : ILogger

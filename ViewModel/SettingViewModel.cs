@@ -4,27 +4,71 @@ using EasySave.Model.Logger;
 
 namespace EasySave.ViewModel
 {
-    /// <summary>
-    /// Handles saving of user preferences: language and log format.
-    /// Applies changes immediately without requiring a restart.
-    /// </summary>
-    public class SettingsViewModel
+    public class SettingsViewModel : ViewModelBase
     {
         private readonly ConfigManager _configManager;
         private readonly LocalisationService _localisation;
         private readonly DynamicLogger _dynamicLogger;
 
+        public List<string> Languages { get; } = new List<string> { "en", "fr" };
+        public List<string> LogFormats { get; } = new List<string> { "json", "xml" };
+
+        public ObservableCollection<string> EncryptedExtensions { get; }
+
         public string SelectedLanguage
         {
             get => _configManager.Config.Language;
-            set => _configManager.Config.Language = value;
+            set
+            {
+                _configManager.Config.Language = value;
+                OnPropertyChanged();
+            }
         }
 
         public string SelectedLogFormat
         {
             get => _configManager.Config.LogFormat;
-            set => _configManager.Config.LogFormat = value;
+            set
+            {
+                _configManager.Config.LogFormat = value;
+                OnPropertyChanged();
+            }
         }
+
+        public string BusinessApp
+        {
+            get => _configManager.Config.BusinessApp;
+            set
+            {
+                _configManager.Config.BusinessApp = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string CryptoSoftKey
+        {
+            get => _configManager.Config.CryptoSoftKey;
+            set
+            {
+                _configManager.Config.CryptoSoftKey = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string _newExtension = string.Empty;
+        public string NewExtension
+        {
+            get => _newExtension;
+            set
+            {
+                _newExtension = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public ICommand SaveCommand { get; }
+        public ICommand AddExtensionCommand { get; }
+        public ICommand RemoveExtensionCommand { get; }
 
         public SettingsViewModel(
             LocalisationService localisation,
@@ -34,22 +78,47 @@ namespace EasySave.ViewModel
             _localisation = localisation;
             _configManager = configManager;
             _dynamicLogger = dynamicLogger;
+
+            EncryptedExtensions = new ObservableCollection<string>(
+                                       configManager.Config.EncryptedExtensions);
+
+            SaveCommand = new RelayCommand(_ => SaveSettings());
+
+            AddExtensionCommand = new RelayCommand(
+                _ => AddExtension(),
+                _ => !string.IsNullOrWhiteSpace(NewExtension));
+
+            RemoveExtensionCommand = new RelayCommand(
+                ext => RemoveExtension(ext as string));
         }
 
-        /// <summary>
-        /// Saves settings, reloads the language and swaps the logger if format changed.
-        /// </summary>
+        private void AddExtension()
+        {
+            string ext = NewExtension.Trim();
+            if (!ext.StartsWith('.')) ext = "." + ext;
+
+            if (!EncryptedExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
+                EncryptedExtensions.Add(ext);
+
+            NewExtension = string.Empty;
+        }
+
+        private void RemoveExtension(string? ext)
+        {
+            if (ext is not null)
+                EncryptedExtensions.Remove(ext);
+        }
+
         public void SaveSettings()
         {
+            _configManager.Config.EncryptedExtensions = EncryptedExtensions.ToList();
             _configManager.Save();
+
             _localisation.LoadLanguage(_configManager.Config.Language);
 
-            // Swap the active logger to match the new format
             ILogger newLogger = LoggerFactory.Resolve(
                 _configManager.Config.LogFormat,
-                _configManager.Config.LogDirectory
-            );
-
+                _configManager.Config.LogDirectory);
             _dynamicLogger.SwapLogger(newLogger);
         }
     }

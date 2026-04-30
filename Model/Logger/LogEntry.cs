@@ -1,5 +1,3 @@
-using System.Xml.Serialization;
-
 namespace EasySave.Model.Logger
 {
     [XmlRoot("LogEntry")]
@@ -11,5 +9,6 @@ namespace EasySave.Model.Logger
         public string DestinationPath { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public long TransferTimeMs { get; set; }
+        public int EncryptionTimeMs { get; set; }
     }
 }

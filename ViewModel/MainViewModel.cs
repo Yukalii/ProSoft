@@ -1,35 +1,90 @@
-using EasySave.Localisation;
 using EasySave.Model.Backup;
 using EasySave.Model.Config;
+using EasySave.Model.Logger;
+using EasySave.Localisation;
 
 namespace EasySave.ViewModel
 {
-    /// <summary>
-    /// Root ViewModel for the console application.
-    /// Provides access to core services: job manager, localisation, config.
-    /// </summary>
-    public class MainViewModel
+    public class MainViewModel : ViewModelBase
     {
         public BackupJobManager JobManager { get; }
-        public LocalisationService Localisation { get; }
-        public ConfigManager Config { get; }
+        public LocalisationService Loc { get; } 
+
+        public JobListViewModel JobListVM { get; }
+        public JobEditorViewModel JobEditorVM { get; }
+        public BackupExecutionViewModel BackupExecutionVM { get; }
+        public SettingsViewModel SettingsVM { get; }
+
+        private ViewModelBase _currentViewModel = null!;
+        public ViewModelBase CurrentViewModel
+        {
+            get => _currentViewModel;
+            set => SetProperty(ref _currentViewModel, value);
+        }
+
+        public ICommand ShowJobsCommand { get; }
+        public ICommand ShowExecutionCommand { get; }
+        public ICommand ShowSettingsCommand { get; }
+        public ICommand ShowJobEditorCommand { get; }
 
         public MainViewModel(
             BackupJobManager jobManager,
             LocalisationService localisation,
-            ConfigManager config)
+            ConfigManager configManager,
+            DynamicLogger dynamicLogger)
         {
             JobManager = jobManager;
-            Localisation = localisation;
-            Config = config;
+            Loc = localisation; 
+
+            BackupExecutionVM = new BackupExecutionViewModel(jobManager);
+
+            JobListVM = new JobListViewModel(
+    jobManager,
+    onRunJob: jobName =>
+    {
+        var job = jobManager.Jobs.Find(j => j.Name == jobName);
+        BackupExecutionVM.SelectedJob = job;
+        CurrentViewModel = BackupExecutionVM;
+    },
+    onJobDeleted: () => BackupExecutionVM.RefreshJobs(),
+    onJobEdit: job =>
+    {
+        CurrentViewModel = new JobEditorViewModel(jobManager, () =>
+        {
+            JobListVM!.RefreshJobs();   
+            JobListVM!.SelectedJob = null;
+            BackupExecutionVM.RefreshJobs();
+            CurrentViewModel = JobListVM;
+        }, job);
+    }
+);
+
+            JobEditorVM = new JobEditorViewModel(jobManager, () =>
+            {
+                JobListVM.RefreshJobs();
+                JobListVM.SelectedJob = null;
+                BackupExecutionVM.RefreshJobs();
+                CurrentViewModel = JobListVM;
+            });
+
+            SettingsVM = new SettingsViewModel(localisation, configManager, dynamicLogger);
+
+            ShowJobsCommand = new RelayCommand(_ =>
+            {
+                JobListVM.SelectedJob = null;
+                CurrentViewModel = JobListVM;
+            });
+
+            ShowExecutionCommand = new RelayCommand(_ => CurrentViewModel = BackupExecutionVM);
+            ShowSettingsCommand = new RelayCommand(_ => CurrentViewModel = SettingsVM);
+            ShowJobEditorCommand = new RelayCommand(_ => CurrentViewModel = JobEditorVM);
+
+            CurrentViewModel = JobListVM;
         }
 
-        /// <summary>
-        /// Loads the configured language at startup.
-        /// </summary>
         public void Initialize()
         {
-            Localisation.LoadLanguage(Config.Config.Language);
+            JobManager.RegisterObserver(BackupExecutionVM);
         }
     }
 }

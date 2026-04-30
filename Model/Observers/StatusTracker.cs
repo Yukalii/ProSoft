@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Text.Json;
-
 namespace EasySave.Model.Observers
 {
     /// <summary>
@@ -17,7 +13,6 @@ namespace EasySave.Model.Observers
         {
             _statusFilePath = statusFilePath;
 
-            // Ensure directory exists
             var directory = Path.GetDirectoryName(_statusFilePath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
