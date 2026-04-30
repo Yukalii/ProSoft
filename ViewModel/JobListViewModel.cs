@@ -24,23 +24,30 @@ namespace EasySave.ViewModel
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
 
+        private Visibility _errorVisibility = Visibility.Collapsed; 
+        public Visibility ErrorVisibility
+        {
+            get => _errorVisibility;
+            private set => SetProperty(ref _errorVisibility, value);
+        }
+
         public JobEditorViewModel(BackupJobManager jobManager, Action onSaved)
         {
             _jobManager = jobManager;
             _onSaved = onSaved;
 
             SaveCommand = new RelayCommand(
-                _ =>
-                {
-                    ErrorMessage = "";
-                    try { Save(); _onSaved(); }
-                    catch (InvalidOperationException)
-                    {
-                        ErrorMessage = "A job with this name already exists.";
-                    }
-                },
-                _ => !string.IsNullOrWhiteSpace(Name)
-            );
+    _ =>
+    {
+        ErrorVisibility = Visibility.Collapsed; 
+        try { Save(); _onSaved(); }
+        catch (InvalidOperationException)
+        {
+            ErrorVisibility = Visibility.Visible;
+        }
+    },
+    _ => !string.IsNullOrWhiteSpace(Name)
+);
             CancelCommand = new RelayCommand(_ => _onSaved());
         }
 

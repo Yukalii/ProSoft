@@ -44,11 +44,12 @@
                    SelectedItem="{Binding SelectedStrategy}"
                    Margin="0,0,0,20"/>
 
-        <TextBlock Grid.Row="5" Grid.ColumnSpan="2" 
-                   Text="{Binding ErrorMessage}"
-                   Foreground="Red"
-                   FontSize="12"
-                   Margin="0,0,0,8"/>
+        <TextBlock Grid.Row="5" Grid.ColumnSpan="2"
+           Text="{Binding DataContext.Loc[editor_duplicate_name], RelativeSource={RelativeSource AncestorType=Window}}"
+           Foreground="Red"
+           FontSize="12"
+           Margin="0,0,0,8"
+           Visibility="{Binding ErrorVisibility, Mode=OneWay}"/>
 
         <StackPanel Grid.Row="6" Grid.ColumnSpan="2" Orientation="Horizontal">
             <Button Content="{Binding DataContext.Loc[editor_save], RelativeSource={RelativeSource AncestorType=Window}}"
