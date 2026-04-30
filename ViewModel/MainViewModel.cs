@@ -39,24 +39,25 @@ namespace EasySave.ViewModel
             BackupExecutionVM = new BackupExecutionViewModel(jobManager);
 
             JobListVM = new JobListViewModel(
-                jobManager,
-                onRunJob: jobName =>
-                {
-                    BackupExecutionVM.JobName = jobName;
-                    CurrentViewModel = BackupExecutionVM;
-                },
-                onJobDeleted: () => BackupExecutionVM.RefreshJobs(),
-                onJobEdit: job =>
-                {
-                    CurrentViewModel = new JobEditorViewModel(jobManager, () =>
-                    {
-                        JobListVM.RefreshJobs();
-                        JobListVM.SelectedJob = null;
-                        BackupExecutionVM.RefreshJobs();
-                        CurrentViewModel = JobListVM;
-                    }, job);
-                }
-            );
+    jobManager,
+    onRunJob: jobName =>
+    {
+        var job = jobManager.Jobs.Find(j => j.Name == jobName);
+        BackupExecutionVM.SelectedJob = job;
+        CurrentViewModel = BackupExecutionVM;
+    },
+    onJobDeleted: () => BackupExecutionVM.RefreshJobs(),
+    onJobEdit: job =>
+    {
+        CurrentViewModel = new JobEditorViewModel(jobManager, () =>
+        {
+            JobListVM!.RefreshJobs();   
+            JobListVM!.SelectedJob = null;
+            BackupExecutionVM.RefreshJobs();
+            CurrentViewModel = JobListVM;
+        }, job);
+    }
+);
 
             JobEditorVM = new JobEditorViewModel(jobManager, () =>
             {

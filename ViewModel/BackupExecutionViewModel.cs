@@ -1,3 +1,6 @@
+using System.Windows;
+using System.Collections.ObjectModel;
+using System.Windows.Input;
 using EasySave.Model.Backup;
 using EasySave.Model.Observers;
 
@@ -25,8 +28,15 @@ namespace EasySave.ViewModel
                 SetProperty(ref _selectedJob, value);
                 _jobName = value?.Name ?? "";
                 OnPropertyChanged(nameof(JobName));
-                CommandManager.InvalidateRequerySuggested(); 
+                CommandManager.InvalidateRequerySuggested();
             }
+        }
+
+        private string _runningJobName = "-";
+        public string RunningJobName
+        {
+            get => _runningJobName;
+            private set => SetProperty(ref _runningJobName, value);
         }
 
         private string _state = "Inactive";
@@ -99,7 +109,7 @@ namespace EasySave.ViewModel
 
         public async void StartJob(string jobName)
         {
-            JobName = jobName;
+            RunningJobName = jobName; 
             await Task.Run(() => _jobManager.ExecuteJob(jobName));
         }
 
