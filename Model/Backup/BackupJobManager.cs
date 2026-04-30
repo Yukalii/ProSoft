@@ -125,6 +125,9 @@ namespace EasySave.Model.Backup
                     $"Cannot add job: maximum of {MaxJobs} jobs reached."
                 );
 
+            if (Jobs.Any(j => string.Equals(j.Name, name, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException(("JobAlreadyExists"));
+
             var strategy = CreateStrategy(strategyType);
             var job = new BackupJob(name, source, target, strategy, _storage, _logger, _config);
             job.AttachObserver(_statusObserver);

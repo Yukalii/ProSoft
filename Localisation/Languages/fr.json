@@ -13,6 +13,7 @@
     "jobs_run": "▶ Exécuter",
     "jobs_edit": "✏ Modifier",
 
+    "editor_duplicate_name":  "Un job avec ce nom existe déjà.",
     "editor_name": "Nom :",
     "editor_source": "Source :",
     "editor_target": "Cible :",

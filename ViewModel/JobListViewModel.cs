@@ -7,8 +7,10 @@ namespace EasySave.ViewModel
         private readonly BackupJobManager _jobManager;
         private readonly Action _onSaved;
         private readonly string? _originalName;
+        private string _errorMessage = "";
 
-        public string Name { get => _name; set => SetProperty(ref _name, value); }
+        public string ErrorMessage { get => _errorMessage; private set => SetProperty(ref _errorMessage, value); }
+        public string Name { get => _name; set { SetProperty(ref _name, value); ErrorMessage = ""; } }
         public string SourcePath { get => _source; set => SetProperty(ref _source, value); }
         public string TargetPath { get => _target; set => SetProperty(ref _target, value); }
         public string SelectedStrategy { get => _strat; set => SetProperty(ref _strat, value); }
@@ -28,7 +30,15 @@ namespace EasySave.ViewModel
             _onSaved = onSaved;
 
             SaveCommand = new RelayCommand(
-                _ => { Save(); _onSaved(); },
+                _ =>
+                {
+                    ErrorMessage = "";
+                    try { Save(); _onSaved(); }
+                    catch (InvalidOperationException)
+                    {
+                        ErrorMessage = "A job with this name already exists.";
+                    }
+                },
                 _ => !string.IsNullOrWhiteSpace(Name)
             );
             CancelCommand = new RelayCommand(_ => _onSaved());

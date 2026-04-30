@@ -9,6 +9,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="130"/>
@@ -43,7 +44,13 @@
                    SelectedItem="{Binding SelectedStrategy}"
                    Margin="0,0,0,20"/>
 
-        <StackPanel Grid.Row="5" Grid.ColumnSpan="2" Orientation="Horizontal">
+        <TextBlock Grid.Row="5" Grid.ColumnSpan="2" 
+                   Text="{Binding ErrorMessage}"
+                   Foreground="Red"
+                   FontSize="12"
+                   Margin="0,0,0,8"/>
+
+        <StackPanel Grid.Row="6" Grid.ColumnSpan="2" Orientation="Horizontal">
             <Button Content="{Binding DataContext.Loc[editor_save], RelativeSource={RelativeSource AncestorType=Window}}"
                     Command="{Binding SaveCommand}" Padding="12,6" Margin="0,0,8,0"/>
             <Button Content="{Binding DataContext.Loc[editor_cancel], RelativeSource={RelativeSource AncestorType=Window}}"
