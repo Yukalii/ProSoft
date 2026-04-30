@@ -4,11 +4,9 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="24" MaxWidth="600" HorizontalAlignment="Left">
 
-            <!-- ═══ TITRE ═══ -->
             <TextBlock Text="{Binding DataContext.Loc[exec_title], RelativeSource={RelativeSource AncestorType=Window}}"
                        FontSize="18" FontWeight="Bold" Margin="0,0,0,24"/>
 
-            <!-- ═══ LANCER UN JOB ═══ -->
             <TextBlock Text="{Binding DataContext.Loc[exec_section_launch], RelativeSource={RelativeSource AncestorType=Window}}"
                        FontSize="13" FontWeight="SemiBold" Foreground="#555" Margin="0,0,0,8"/>
             <Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="6" Padding="16" Margin="0,0,0,24">
@@ -25,7 +23,6 @@
                 </StackPanel>
             </Border>
 
-            <!-- ═══ ÉTAT ═══ -->
             <TextBlock Text="{Binding DataContext.Loc[exec_section_status], RelativeSource={RelativeSource AncestorType=Window}}"
                        FontSize="13" FontWeight="SemiBold" Foreground="#555" Margin="0,0,0,8"/>
             <Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="6" Padding="16" Margin="0,0,0,24">
@@ -43,7 +40,7 @@
                                Text="{Binding DataContext.Loc[exec_job_name], RelativeSource={RelativeSource AncestorType=Window}}"
                                Foreground="#888" Margin="0,0,0,6"/>
                     <TextBlock Grid.Row="0" Grid.Column="1"
-                               Text="{Binding JobName, Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                               Text="{Binding RunningJobName, Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,6"/>
 
                     <TextBlock Grid.Row="1" Grid.Column="0"
                                Text="{Binding DataContext.Loc[exec_state], RelativeSource={RelativeSource AncestorType=Window}}"
@@ -53,7 +50,6 @@
                 </Grid>
             </Border>
 
-            <!-- ═══ PROGRESSION ═══ -->
             <TextBlock Text="{Binding DataContext.Loc[exec_section_progress], RelativeSource={RelativeSource AncestorType=Window}}"
                        FontSize="13" FontWeight="SemiBold" Foreground="#555" Margin="0,0,0,8"/>
             <Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="6" Padding="16" Margin="0,0,0,24">
