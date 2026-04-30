@@ -36,5 +36,8 @@
     "settings_language": "Langue :",
     "settings_logformat": "Format de log :",
     "settings_businessapp": "Buisness Application",
+    "settings_cryptokey": "Clé de chiffrement :",
+    "settings_extensions": "Extensions chiffrées :",
+    "settings_add_extension": "➕ Ajouter",
     "settings_save": "💾 Sauvegarder"
 }
