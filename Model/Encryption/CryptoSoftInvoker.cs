@@ -25,10 +25,17 @@ namespace EasySave.Model.Encryption
 
             process.WaitForExit();
 
+            // Handle the single-instance restriction specifically
+            if (process.ExitCode == -1)
+                throw new InvalidOperationException(
+                    "CryptoSoft is already running on this machine. " +
+                    $"Backup job '{filePath}' has been paused.");
+
+            // Handle all other errors (-99 = internal exception, etc.)
             if (process.ExitCode < 0)
                 throw new InvalidOperationException(
-                    $"CryptoSoft failed with exit code {process.ExitCode} (0x{process.ExitCode & 0xFFFFFFFF:X8}). " +
-                    $"File: {filePath}");
+                    $"CryptoSoft failed with exit code {process.ExitCode} " +
+                    $"(0x{process.ExitCode & 0xFFFFFFFF:X8}). File: {filePath}");
 
             return process.ExitCode;
         }
