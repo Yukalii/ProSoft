@@ -1,0 +1,40 @@
+name: GitActionRelease
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers when a tag is pushed like "v1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        targetos: [win-x64] 
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish app
+        # This compiles a standalone version of the app so users don't need .NET installed
+        run: dotnet publish ProSoft.sln -c Release -r ${{ matrix.targetos }} --self-contained true -p:PublishSingleFile=true -o ./publish/${{ matrix.targetos }}
+
+      - name: Zip Output
+        shell: pwsh
+        run: |
+          Compress-Archive -Path ".\publish\${{ matrix.targetos }}\*" -DestinationPath "ProSoft-${{ github.ref_name }}-${{ matrix.targetos }}.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Automatically attaches the zipped executable to the release page
+          files: ProSoft-${{ github.ref_name }}-${{ matrix.targetos }}.zip
