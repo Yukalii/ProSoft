@@ -1,202 +1,237 @@
-﻿using System.Text.Json;
+﻿using EasySave.Model.Backup;
+using EasySave.Model.BusinessSoftware;
 using EasySave.Model.Config;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 using EasySave.Model.Strategies;
-using EasySave.Model.BusinessSoftware;
 
-namespace EasySave.Model.Backup
-
+public class BackupJobManager
 {
-    /// <summary>
-    /// Manages the list of backup jobs, handles persistence,
-    /// and provides methods to execute jobs.
-    /// </summary>
+    private readonly string _jobsFilePath;
+    private readonly AppConfig _config;
+    private readonly IBusinessSoftwareManager _businessSoftware;
 
-    public class BackupJobManager
+    // Shared only for loading/saving jobs
+    private readonly IStorage _sharedStorage;
+    private readonly ILogger _sharedLogger;
+
+    // Supports multiple observers (UI + StatusTracker)
+    private readonly List<IBackupObserver> _observers = new();
+
+    // Tracks running jobs
+    private readonly Dictionary<string, Task> _runningJobs = new();
+    private readonly HashSet<string> _waitingJobs = new();
+
+    public int? MaxJobs { get; set; } = null;
+    public bool CanAddJob => MaxJobs == null || Jobs.Count < MaxJobs;
+
+    public List<BackupJob> Jobs { get; private set; } = new();
+
+    public BackupJobManager(
+        string jobsFilePath,
+        IStorage storage,
+        ILogger logger,
+        IBackupObserver statusObserver,
+        AppConfig config,
+        IBusinessSoftwareManager businessSoftware)
     {
-        private readonly string _jobsFilePath;
-        private readonly IStorage _storage;
-        private readonly ILogger _logger;
-        private IBackupObserver _statusObserver;
-        private readonly AppConfig _config;
-        private readonly IBusinessSoftwareManager _businessSoftware;
+        _jobsFilePath = jobsFilePath;
+        _sharedStorage = storage;
+        _sharedLogger = logger;
+        _config = config;
+        _businessSoftware = businessSoftware;
 
-        /// <summary>
-        /// Maximum number of backup jobs allowed. Null means no limit.
-        /// </summary>
-        public int? MaxJobs { get; set; } = null;
+        // Add initial observer
+        _observers.Add(statusObserver);
 
-        public bool CanAddJob => MaxJobs == null || Jobs.Count < MaxJobs;
+        LoadJobs();
+    }
 
-        public List<BackupJob> Jobs { get; private set; } = new();
+    //  Parallel execution support
+    public bool IsJobRunning(string name)
+        => _runningJobs.ContainsKey(name);
 
-        private readonly HashSet<string> _waitingJobs = new HashSet<string>();
+    public IReadOnlyDictionary<string, Task> RunningJobs => _runningJobs;
 
-        public BackupJobManager(
-            string jobsFilePath,
-            IStorage storage,
-            ILogger logger,
-            IBackupObserver statusObserver,
-            AppConfig config,
-            IBusinessSoftwareManager businessSoftware)
+    public async Task ExecuteJob(string name)
+    {
+        lock (_waitingJobs)
         {
-            _jobsFilePath = jobsFilePath;
-            _storage = storage;
-            _logger = logger;
-            _statusObserver = statusObserver;
-            _config = config;
-            _businessSoftware = businessSoftware;
-
-            LoadJobs();
-        }
-
-        /// <summary>
-        /// Loads jobs from a JSON file.
-        /// </summary>
-        private void LoadJobs()
-        {
-            if (!File.Exists(_jobsFilePath))
-            {
-                Jobs = new List<BackupJob>();
+            if (_waitingJobs.Contains(name) || _runningJobs.ContainsKey(name))
                 return;
-            }
 
-            string json = File.ReadAllText(_jobsFilePath);
-            var jobDtos = JsonSerializer.Deserialize<List<BackupJobDTO>>(json)
-                          ?? new List<BackupJobDTO>();
-
-            Jobs = new List<BackupJob>();
-
-            foreach (var dto in jobDtos)
-            {
-                var strategy = CreateStrategy(dto.StrategyType);
-
-                var job = new BackupJob(
-                    dto.Name,
-                    dto.SourcePath,
-                    dto.TargetPath,
-                    strategy,
-                    _storage,
-                    _logger,
-                    _config
-                );
-
-                job.AttachObserver(_statusObserver);
-                Jobs.Add(job);
-            }
+            _waitingJobs.Add(name);
         }
 
-        /// <summary>
-        /// Saves jobs to a JSON file.
-        /// </summary>
-        private void SaveJobs()
+        try
         {
-            var jobDtos = new List<BackupJobDTO>();
+            // Wait for business software to close
+            while (_businessSoftware.SoftwareIsRunning())
+                await Task.Delay(2000);
 
-            foreach (var job in Jobs)
-            {
-                jobDtos.Add(new BackupJobDTO
-                {
-                    Name = job.Name,
-                    SourcePath = job.SourcePath,
-                    TargetPath = job.TargetPath,
-                    StrategyType = job.Strategy.GetType().Name
-                });
-            }
+            var job = Jobs.Find(j => j.Name == name);
+            if (job == null)
+                return;
 
-            string json = JsonSerializer.Serialize(jobDtos, new JsonSerializerOptions
+            var storage = new LocalStorage();
+            var logger = new JsonLogger(_config.LogDirectory);
+
+            // Create a unique status file for this job
+            string statusFile = Path.Combine(
+                _config.StatusFilePath,
+                $"{name}_status.json"
+            );
+
+            var statusTracker = new StatusTracker(statusFile);
+
+            var strategy = CreateStrategy(job.Strategy.GetType().Name);
+
+            // Create a fresh job instance for this execution
+            var jobInstance = new BackupJob(
+                job.Name,
+                job.SourcePath,
+                job.TargetPath,
+                strategy,
+                storage,
+                logger,
+                _config
+            );
+
+            // Attach all observers (UI observers)
+            foreach (var obs in _observers)
+                jobInstance.AttachObserver(obs);
+
+            // Attach per-job StatusTracker
+            jobInstance.AttachObserver(statusTracker);
+
+            //  Run job in background
+            var task = Task.Run(() =>
             {
-                WriteIndented = true
+                jobInstance.Execute();
             });
 
-            File.WriteAllText(_jobsFilePath, json);
+            lock (_runningJobs)
+            {
+                _runningJobs[name] = task;
+            }
+
+            await task;
+
+            lock (_runningJobs)
+            {
+                _runningJobs.Remove(name);
+            }
         }
-
-        /// <summary>
-        /// Adds a new backup job.
-        /// </summary>
-        /// <exception cref="InvalidOperationException">Thrown when the job limit is reached.</exception>
-        public void AddJob(string name, string source, string target, string strategyType)
-        {
-            if (!CanAddJob)
-                throw new InvalidOperationException(
-                    $"Cannot add job: maximum of {MaxJobs} jobs reached."
-                );
-
-            if (Jobs.Any(j => string.Equals(j.Name, name, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException(("JobAlreadyExists"));
-
-            var strategy = CreateStrategy(strategyType);
-            var job = new BackupJob(name, source, target, strategy, _storage, _logger, _config);
-            job.AttachObserver(_statusObserver);
-
-            Jobs.Add(job);
-            SaveJobs();
-        }
-
-        /// <summary>
-        /// Deletes a job by name.
-        /// </summary>
-        public void DeleteJob(string name)
-        {
-            Jobs.RemoveAll(j => j.Name == name);
-            SaveJobs();
-        }
-
-        /// <summary>
-        /// Executes a job by name.
-        /// </summary>
-        public async Task ExecuteJob(string name)
+        finally
         {
             lock (_waitingJobs)
             {
-                if (_waitingJobs.Contains(name))
-                {
-                    return;
-                }
-                _waitingJobs.Add(name);
+                _waitingJobs.Remove(name);
             }
-            try
-            {
-                while (_businessSoftware.SoftwareIsRunning())
-                {
-                    Debug.WriteLine("open");
-                    await Task.Delay(2000);
-                }
-                Debug.WriteLine("close");
-                var job = Jobs.Find(j => j.Name == name);
-                job?.Execute();
-            }
-            finally
-            {
-                lock (_waitingJobs)
-                {
-                    _waitingJobs.Remove(name);
-                }
-            }
+        }
+    }
+
+    //  Load / save jobs
+    private void LoadJobs()
+    {
+        if (!File.Exists(_jobsFilePath))
+        {
+            Jobs = new List<BackupJob>();
+            return;
         }
 
-        /// <summary>
-        /// Factory method to create a strategy from a string.
-        /// </summary>
-        private IBackupStrategy CreateStrategy(string type)
-        {
-            return type switch
-            {
-                "FullBackupStrategy" => new FullBackupStrategy(),
-                "DifferentialBackupStrategy" => new DifferentialBackupStrategy(),
-                _ => throw new InvalidOperationException($"Unknown strategy: {type}")
-            };
-        }
-        public void RegisterObserver(IBackupObserver observer)
-        {
-            _statusObserver = observer;
+        string json = File.ReadAllText(_jobsFilePath);
+        var jobDtos = JsonSerializer.Deserialize<List<BackupJobDTO>>(json)
+                      ?? new List<BackupJobDTO>();
 
-            foreach (var job in Jobs)
-                job.AttachObserver(observer);
+        Jobs = new List<BackupJob>();
+
+        foreach (var dto in jobDtos)
+        {
+            var strategy = CreateStrategy(dto.StrategyType);
+
+            var job = new BackupJob(
+                dto.Name,
+                dto.SourcePath,
+                dto.TargetPath,
+                strategy,
+                _sharedStorage,
+                _sharedLogger,
+                _config
+            );
+
+            // Attach all observers
+            foreach (var obs in _observers)
+                job.AttachObserver(obs);
+
+            Jobs.Add(job);
         }
+    }
+
+    private void SaveJobs()
+    {
+        var jobDtos = Jobs.Select(job => new BackupJobDTO
+        {
+            Name = job.Name,
+            SourcePath = job.SourcePath,
+            TargetPath = job.TargetPath,
+            StrategyType = job.Strategy.GetType().Name
+        }).ToList();
+
+        string json = JsonSerializer.Serialize(jobDtos, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+
+        File.WriteAllText(_jobsFilePath, json);
+    }
+
+    //  Job management
+    public void AddJob(string name, string source, string target, string strategyType)
+    {
+        if (!CanAddJob)
+            throw new InvalidOperationException(
+                $"Cannot add job: maximum of {MaxJobs} jobs reached."
+            );
+
+        if (Jobs.Any(j => j.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("JobAlreadyExists");
+
+        var strategy = CreateStrategy(strategyType);
+
+        var job = new BackupJob(name, source, target, strategy, _sharedStorage, _sharedLogger, _config);
+
+        // Attach all observers
+        foreach (var obs in _observers)
+            job.AttachObserver(obs);
+
+        Jobs.Add(job);
+        SaveJobs();
+    }
+
+    public void DeleteJob(string name)
+    {
+        Jobs.RemoveAll(j => j.Name == name);
+        SaveJobs();
+    }
+
+    private IBackupStrategy CreateStrategy(string type)
+    {
+        return type switch
+        {
+            "FullBackupStrategy" => new FullBackupStrategy(),
+            "DifferentialBackupStrategy" => new DifferentialBackupStrategy(),
+            _ => throw new InvalidOperationException($"Unknown strategy: {type}")
+        };
+    }
+
+    public void RegisterObserver(IBackupObserver observer)
+    {
+        _observers.Add(observer);
+
+        foreach (var job in Jobs)
+            job.AttachObserver(observer);
     }
 
     /// <summary>

@@ -6,38 +6,89 @@ using EasySave.Model.Observers;
 
 namespace EasySave.ViewModel
 {
-    public class BackupExecutionViewModel : ViewModelBase, IBackupObserver
+    public class BackupExecutionViewModel : ViewModelBase
     {
         private readonly BackupJobManager _jobManager;
 
-        public ObservableCollection<BackupJob> AvailableJobs { get; } = new();
+        public ObservableCollection<RunningJobViewModel> RunningJobs { get; }
+            = new ObservableCollection<RunningJobViewModel>();
 
-        private string _jobName = "";
-        public string JobName
+        //  Global progress
+        private int _globalTotalFiles;
+        public int GlobalTotalFiles
         {
-            get => _jobName;
-            set => SetProperty(ref _jobName, value);
+            get => _globalTotalFiles;
+            private set => SetProperty(ref _globalTotalFiles, value);
         }
 
-        private BackupJob? _selectedJob;
-        public BackupJob? SelectedJob
+        private int _globalProcessedFiles;
+        public int GlobalProcessedFiles
         {
-            get => _selectedJob;
-            set
+            get => _globalProcessedFiles;
+            private set => SetProperty(ref _globalProcessedFiles, value);
+        }
+
+        public int GlobalTotalFilesDisplay => GlobalTotalFiles > 0 ? GlobalTotalFiles : 1;
+
+        public ICommand StartSingleJobCommand { get; }
+        public ICommand StartMultipleJobsCommand { get; }
+
+        public BackupExecutionViewModel(BackupJobManager jobManager)
+        {
+            _jobManager = jobManager;
+
+            StartSingleJobCommand = new RelayCommand(jobName =>
             {
-                SetProperty(ref _selectedJob, value);
-                _jobName = value?.Name ?? "";
-                OnPropertyChanged(nameof(JobName));
-                CommandManager.InvalidateRequerySuggested();
+                if (jobName is string name && !string.IsNullOrWhiteSpace(name))
+                    StartSingleJob(name);
+            });
+
+            StartMultipleJobsCommand = new RelayCommand(jobs =>
+            {
+                if (jobs is IEnumerable<BackupJob> list)
+                    StartMultipleJobs(list);
+            });
+        }
+
+        //  Start jobs
+        public void StartSingleJob(string jobName)
+        {
+            var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
+            RunningJobs.Add(vm);
+
+            _jobManager.RegisterObserver(vm);
+            _ = _jobManager.ExecuteJob(jobName);
+        }
+
+        public void StartMultipleJobs(IEnumerable<BackupJob> jobs)
+        {
+            foreach (var job in jobs)
+            {
+                var vm = new RunningJobViewModel(job.Name, RefreshRunningJobs);
+                RunningJobs.Add(vm);
+
+                _jobManager.RegisterObserver(vm);
+                _ = _jobManager.ExecuteJob(job.Name);
             }
         }
 
-        private string _runningJobName = "-";
-        public string RunningJobName
+
+        //  Refresh global progress
+        public void RefreshRunningJobs()
         {
-            get => _runningJobName;
-            private set => SetProperty(ref _runningJobName, value);
+            GlobalTotalFiles = RunningJobs.Sum(j => j.TotalFiles);
+            GlobalProcessedFiles = RunningJobs.Sum(j => j.ProcessedFiles);
+
+            OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
         }
+    }
+
+    //  Per-job View-model
+    public class RunningJobViewModel : ViewModelBase, IBackupObserver
+    {
+        public string JobName { get; }
+
+        private readonly Action _onUpdated;
 
         private string _state = "Inactive";
         public string State
@@ -50,20 +101,7 @@ namespace EasySave.ViewModel
         public int TotalFiles
         {
             get => _totalFiles;
-            private set
-            {
-                SetProperty(ref _totalFiles, value);
-                OnPropertyChanged(nameof(TotalFilesDisplay));
-            }
-        }
-
-        public int TotalFilesDisplay => TotalFiles > 0 ? TotalFiles : 1;
-
-        private long _totalSize;
-        public long TotalSize
-        {
-            get => _totalSize;
-            private set => SetProperty(ref _totalSize, value);
+            private set => SetProperty(ref _totalFiles, value);
         }
 
         private int _processedFiles;
@@ -71,6 +109,13 @@ namespace EasySave.ViewModel
         {
             get => _processedFiles;
             private set => SetProperty(ref _processedFiles, value);
+        }
+
+        private long _totalSize;
+        public long TotalSize
+        {
+            get => _totalSize;
+            private set => SetProperty(ref _totalSize, value);
         }
 
         private long _processedSize;
@@ -94,32 +139,22 @@ namespace EasySave.ViewModel
             private set => SetProperty(ref _currentDestinationFile, value);
         }
 
-        public ICommand StartJobCommand { get; }
-
-        public BackupExecutionViewModel(BackupJobManager jobManager)
+        public RunningJobViewModel(string jobName, Action onUpdated)
         {
-            _jobManager = jobManager;
-            RefreshJobs();
-
-            StartJobCommand = new RelayCommand(
-                _ => StartJob(_jobName),
-                _ => !string.IsNullOrWhiteSpace(_jobName)
-            );
+            JobName = jobName;
+            _onUpdated = onUpdated;
         }
 
-        public async void StartJob(string jobName)
+        public int Percentage
         {
-            RunningJobName = jobName; 
-            await Task.Run(() => _jobManager.ExecuteJob(jobName));
+            get
+            {
+                if (TotalFiles <= 0) return 0;
+                return (int)Math.Round(ProcessedFiles * 100.0 / TotalFiles);
+            }
         }
 
-        public void RefreshJobs()
-        {
-            AvailableJobs.Clear();
-            foreach (var job in _jobManager.Jobs)
-                AvailableJobs.Add(job);
-        }
-
+        // Called by StatusTracker
         public void OnJobUpdated(StatusSnapshot snapshot)
         {
             Application.Current.Dispatcher.Invoke(() =>
@@ -131,6 +166,9 @@ namespace EasySave.ViewModel
                 ProcessedSize = snapshot.ProcessedSize;
                 CurrentSourceFile = snapshot.CurrentSourceFile;
                 CurrentDestinationFile = snapshot.CurrentDestinationFile;
+
+                OnPropertyChanged(nameof(Percentage));
+                _onUpdated?.Invoke();
             });
         }
     }
