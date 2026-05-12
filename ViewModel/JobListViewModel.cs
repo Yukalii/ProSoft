@@ -1,77 +1,143 @@
 using EasySave.Model.Backup;
+using System.Collections.ObjectModel;
+using System.Windows.Input;
 
 namespace EasySave.ViewModel
 {
-    public class JobEditorViewModel : ViewModelBase
+    public class JobListViewModel : ViewModelBase
     {
         private readonly BackupJobManager _jobManager;
-        private readonly Action _onSaved;
-        private readonly string? _originalName;
-        private string _errorMessage = "";
+        private readonly Action<string> _onRunJob;
+        private readonly Action? _onJobDeleted;
+        private readonly Action<BackupJob>? _onJobEdit;
 
-        public string ErrorMessage { get => _errorMessage; private set => SetProperty(ref _errorMessage, value); }
-        public string Name { get => _name; set { SetProperty(ref _name, value); ErrorMessage = ""; } }
-        public string SourcePath { get => _source; set => SetProperty(ref _source, value); }
-        public string TargetPath { get => _target; set => SetProperty(ref _target, value); }
-        public string SelectedStrategy { get => _strat; set => SetProperty(ref _strat, value); }
+        // All jobs displayed in the list
+        public ObservableCollection<JobListItemViewModel> Jobs { get; } = new();
 
-        private string _name = "", _source = "", _target = "", _strat = "FullBackupStrategy";
+        // Multi‑selection support
+        public ObservableCollection<BackupJob> SelectedJobs { get; }
+            = new ObservableCollection<BackupJob>();
 
-        public List<string> Strategies { get; } = new() { "FullBackupStrategy", "DifferentialBackupStrategy" };
+        private JobListItemViewModel? _selectedJob;
 
-        public string Title => _originalName == null ? "Nouveau job" : "Modifier le job";
-
-        public ICommand SaveCommand { get; }
-        public ICommand CancelCommand { get; }
-
-        private Visibility _errorVisibility = Visibility.Collapsed; 
-        public Visibility ErrorVisibility
+        private void OnSelectionChanged()
         {
-            get => _errorVisibility;
-            private set => SetProperty(ref _errorVisibility, value);
+            CommandManager.InvalidateRequerySuggested();
         }
 
-        public JobEditorViewModel(BackupJobManager jobManager, Action onSaved)
+        public JobListItemViewModel? SelectedJob
+        {
+            get => _selectedJob;
+            set => SetProperty(ref _selectedJob, value);
+        }
+
+        public ICommand DeleteJobCommand { get; }
+        public ICommand EditJobCommand { get; }
+        public ICommand RunJobCommand { get; }
+
+        public JobListViewModel(
+            BackupJobManager jobManager,
+            Action<string> onRunJob,
+            Action? onJobDeleted = null,
+            Action<BackupJob>? onJobEdit = null)
         {
             _jobManager = jobManager;
-            _onSaved = onSaved;
+            _onRunJob = onRunJob;
+            _onJobDeleted = onJobDeleted;
+            _onJobEdit = onJobEdit;
 
-            SaveCommand = new RelayCommand(
-    _ =>
+            RefreshJobs();
+
+            DeleteJobCommand = new RelayCommand(
+                _ =>
+                {
+                    if (SelectedJob == null) return;
+
+                    _jobManager.DeleteJob(SelectedJob.Job.Name);
+                    Jobs.Remove(SelectedJob);
+                    SelectedJob = null;
+
+                    _onJobDeleted?.Invoke();
+                },
+                _ => SelectedJob != null
+            );
+
+            EditJobCommand = new RelayCommand(
+                _ =>
+                {
+                    if (SelectedJob != null)
+                        _onJobEdit?.Invoke(SelectedJob.Job);
+                },
+                _ => SelectedJob != null
+            );
+
+            RunJobCommand = new RelayCommand(
+                _ =>
+                {
+                    foreach (var job in SelectedJobs)
+                        _onRunJob(job.Name);
+                },
+                _ => SelectedJobs.Any()
+            );
+        }
+
+        //  Multi-selection logic
+        public void ToggleJobSelection(JobListItemViewModel item, bool isSelected)
+        {
+            if (isSelected)
+            {
+                if (!SelectedJobs.Contains(item.Job))
+                    SelectedJobs.Add(item.Job);
+            }
+            else
+            {
+                SelectedJobs.Remove(item.Job);
+            }
+
+            OnSelectionChanged();
+        }
+
+        //  Refresh job list
+        public void RefreshJobs()
+        {
+            Jobs.Clear();
+            SelectedJobs.Clear();
+
+            foreach (var job in _jobManager.Jobs)
+            {
+                var item = new JobListItemViewModel(job, OnSelectionChanged, this);
+                Jobs.Add(item);
+            }
+        }
+    }
+
+    //  Wrapper for each job row (checkbox + job)
+    public class JobListItemViewModel : ViewModelBase
     {
-        ErrorVisibility = Visibility.Collapsed; 
-        try { Save(); _onSaved(); }
-        catch (InvalidOperationException)
+        private readonly Action _onSelectionChanged;
+        private readonly JobListViewModel _parent;
+
+        public JobListItemViewModel(BackupJob job, Action onSelectionChanged, JobListViewModel parent)
         {
-            ErrorVisibility = Visibility.Visible;
-        }
-    },
-    _ => !string.IsNullOrWhiteSpace(Name)
-);
-            CancelCommand = new RelayCommand(_ => _onSaved());
+            Job = job;
+            _onSelectionChanged = onSelectionChanged;
+            _parent = parent;
         }
 
-        public JobEditorViewModel(BackupJobManager jobManager, Action onSaved, BackupJob jobToEdit)
-            : this(jobManager, onSaved)
+        private bool _isSelected;
+        public bool IsSelected
         {
-            _originalName = jobToEdit.Name;
-            Name = jobToEdit.Name;
-            SourcePath = jobToEdit.SourcePath;
-            TargetPath = jobToEdit.TargetPath;
-            SelectedStrategy = jobToEdit.StrategyName;
+            get => _isSelected;
+            set
+            {
+                if (SetProperty(ref _isSelected, value))
+                {
+                    _parent.ToggleJobSelection(this, value);
+                    _onSelectionChanged?.Invoke();
+                }
+            }
         }
 
-        public void Save()
-        {
-            if (_originalName != null)
-                _jobManager.DeleteJob(_originalName); 
-
-            _jobManager.AddJob(Name, SourcePath, TargetPath, SelectedStrategy);
-
-            Name = "";
-            SourcePath = "";
-            TargetPath = "";
-            SelectedStrategy = "FullBackupStrategy";
-        }
+        public BackupJob Job { get; }
     }
 }
