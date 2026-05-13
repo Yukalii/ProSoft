@@ -19,6 +19,8 @@ namespace EasySave.Model.Backup
         public string StrategyName => Strategy.GetType().Name;
         public IBackupStrategy Strategy { get; }
 
+        private readonly SemaphoreSlim _largeFileSemaphore;
+        private readonly int _largeFileThresholdKb;
         private readonly IStorage _storage;
         private readonly ILogger _logger;
         private readonly List<IBackupObserver> _observers;
@@ -31,7 +33,9 @@ namespace EasySave.Model.Backup
             IBackupStrategy strategy,
             IStorage storage,
             ILogger logger,
-            AppConfig config)
+            AppConfig config,
+            SemaphoreSlim largeFileSemaphore,
+            int largeFileThresholdKb)
         {
             Name = name;
             SourcePath = sourcePath;
@@ -40,7 +44,9 @@ namespace EasySave.Model.Backup
             _storage = storage;
             _logger = logger;
             _observers = new List<IBackupObserver>();
-            _config = config;
+            _config = config; 
+            _largeFileSemaphore = largeFileSemaphore;
+            _largeFileThresholdKb = largeFileThresholdKb;
         }
 
         /// <summary>
@@ -72,7 +78,7 @@ namespace EasySave.Model.Backup
         /// <summary>
         /// Executes the backup job using the selected strategy.
         /// </summary>
-        public void Execute()
+        public async Task ExecuteAsync()
         {
             var context = new BackupJobContext(
                 Name,
@@ -81,9 +87,11 @@ namespace EasySave.Model.Backup
                 _storage,
                 _logger,
                 _observers,
-                _config);
+                _config,
+                _largeFileSemaphore,
+                _largeFileThresholdKb);
 
-            Strategy.Execute(context);
+            await Strategy.ExecuteAsync(context);
         }
     }
 }
