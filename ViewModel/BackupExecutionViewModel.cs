@@ -93,6 +93,10 @@ namespace EasySave.ViewModel
                 var vm = new RunningJobViewModel(job.Name, RefreshRunningJobs);
                 RunningJobs.Add(vm);
                 _jobManager.RegisterObserver(vm);
+            }
+
+            foreach (var job in _lastMultipleJobs)
+            {
                 _ = _jobManager.ExecuteJob(job.Name);
             }
         }
@@ -156,6 +160,8 @@ namespace EasySave.ViewModel
 
         public void OnJobUpdated(StatusSnapshot snapshot)
         {
+            if (snapshot.JobName != JobName) return;
+
             Application.Current.Dispatcher.Invoke(() =>
             {
                 State = snapshot.State;
