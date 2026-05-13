@@ -37,6 +37,8 @@ namespace EasySave.Model.Strategies
             {
                 foreach (var sourceFile in allFiles)
                 {
+                    control?.WaitIfPaused();
+
                     string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
                     string destinationFile = Path.Combine(context.TargetPath, relativePath);
 

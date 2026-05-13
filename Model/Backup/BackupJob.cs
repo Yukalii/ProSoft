@@ -78,16 +78,9 @@ namespace EasySave.Model.Backup
         /// <summary>
         /// Executes the backup job using the selected strategy.
         /// </summary>
-        public async Task ExecuteAsync()
-        {
-            var context = BuildContext(null);
-            Strategy.ExecuteAsync(context);
-        }
-        public void ExecuteAsync(JobControlToken controlToken)
-        {
-            var context = BuildContext(controlToken);
-            Strategy.ExecuteAsync(context);
-        }
+        public Task ExecuteAsync() => Strategy.ExecuteAsync(BuildContext(null));
+        public Task ExecuteAsync(JobControlToken controlToken)
+            => Strategy.ExecuteAsync(BuildContext(controlToken));
 
         private BackupJobContext BuildContext(JobControlToken? controlToken)
         {

@@ -56,7 +56,7 @@ namespace EasySave.Model.Strategies
                     try
                     {
                         var stopwatch = Stopwatch.StartNew();
-                        bool success = storage.CopyFile(sourceFile, destinationFile);
+                        bool success = storage.CopyFile(sourceFile, destinationFile, control); ;
                         stopwatch.Stop();
 
                         long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;

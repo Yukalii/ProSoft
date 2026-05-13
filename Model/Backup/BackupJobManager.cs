@@ -159,7 +159,7 @@ public class BackupJobManager
             jobInstance.AttachObserver(statusTracker);
 
             //  Run job in background
-            var task = Task.Run(() => jobInstance.ExecuteAsync());
+            var task = jobInstance.ExecuteAsync(controlToken);
 
             lock (_runningJobs)
             {
