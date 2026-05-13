@@ -22,6 +22,7 @@ public class BackupJobManager
     // Tracks running jobs
     private readonly Dictionary<string, Task> _runningJobs = new();
     private readonly HashSet<string> _waitingJobs = new();
+    private readonly Dictionary<string, JobControlToken> _controlTokens = new();
 
     public int? MaxJobs { get; set; } = null;
     public bool CanAddJob => MaxJobs == null || Jobs.Count < MaxJobs;
@@ -52,6 +53,13 @@ public class BackupJobManager
     public bool IsJobRunning(string name)
         => _runningJobs.ContainsKey(name);
 
+    public bool IsJobPaused(string name)
+    {
+        lock (_controlTokens)
+        {
+            return _controlTokens.TryGetValue(name, out var token) && token.IsPaused;
+        }
+    }
     public IReadOnlyDictionary<string, Task> RunningJobs => _runningJobs;
 
     public async Task ExecuteJob(string name)
@@ -62,6 +70,13 @@ public class BackupJobManager
                 return;
 
             _waitingJobs.Add(name);
+        }
+
+        var controlToken = new JobControlToken();
+
+        lock (_controlTokens)
+        {
+            _controlTokens[name] = controlToken;
         }
 
         try
@@ -108,7 +123,7 @@ public class BackupJobManager
             //  Run job in background
             var task = Task.Run(() =>
             {
-                jobInstance.Execute();
+                jobInstance.Execute(controlToken);
             });
 
             lock (_runningJobs)
@@ -129,6 +144,68 @@ public class BackupJobManager
             {
                 _waitingJobs.Remove(name);
             }
+            lock (_controlTokens)
+            {
+                if (_controlTokens.TryGetValue(name, out var token))
+                {
+                    token.Dispose();
+                    _controlTokens.Remove(name);
+                }
+            }
+        }
+    }
+
+    public void PlayJob(string name)
+    {
+        lock (_controlTokens)
+        {
+            if (_controlTokens.TryGetValue(name, out var token))
+                token.Play();
+        }
+    }
+
+    public void PauseJob(string name)
+    {
+        lock (_controlTokens)
+        {
+            if (_controlTokens.TryGetValue(name, out var token))
+                token.Pause();
+        }
+    }
+
+    public void StopJob(string name)
+    {
+        lock (_controlTokens)
+        {
+            if (_controlTokens.TryGetValue(name, out var token))
+                token.Stop();
+        }
+    }
+
+    public void PlayAll()
+    {
+        lock (_controlTokens)
+        {
+            foreach (var token in _controlTokens.Values)
+                token.Play();
+        }
+    }
+
+    public void PauseAll()
+    {
+        lock (_controlTokens)
+        {
+            foreach (var token in _controlTokens.Values)
+                token.Pause();
+        }
+    }
+
+    public void StopAll()
+    {
+        lock (_controlTokens)
+        {
+            foreach (var token in _controlTokens.Values)
+                token.Stop();
         }
     }
 

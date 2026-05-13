@@ -18,6 +18,7 @@ namespace EasySave.Model.Strategies
             var storage = context.Storage;
             var logger = context.Logger;
             var observers = context.Observers;
+            var control = context.ControlToken;
 
             var allFiles = storage.EnumerateFiles(context.SourcePath);
             long totalSize = 0;
@@ -33,80 +34,102 @@ namespace EasySave.Model.Strategies
             long processedSize = 0;
             int processedFiles = 0;
 
-            foreach (var sourceFile in storage.EnumerateFiles(context.SourcePath))
+            try
             {
-                string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
-                string destinationFile = Path.Combine(context.TargetPath, relativePath);
-
-                var sourceInfo = storage.GetFileInfo(sourceFile);
-                var targetInfo = storage.GetFileInfo(destinationFile);
-
-                bool mustCopy =
-                    !targetInfo.Exists ||
-                    sourceInfo.LastModified > targetInfo.LastModified ||
-                    sourceInfo.Size != targetInfo.Size;
-
-                if (mustCopy)
+                foreach (var sourceFile in storage.EnumerateFiles(context.SourcePath))
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
+                    control?.WaitIfPaused();
 
-                    var stopwatch = Stopwatch.StartNew();
-                    bool success = storage.CopyFile(sourceFile, destinationFile);
-                    stopwatch.Stop();
+                    string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
+                    string destinationFile = Path.Combine(context.TargetPath, relativePath);
 
-                    long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
+                    var sourceInfo = storage.GetFileInfo(sourceFile);
+                    var targetInfo = storage.GetFileInfo(destinationFile);
 
-                    int encryptionTime = 0;
-                    if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                    bool mustCopy =
+                        !targetInfo.Exists ||
+                        sourceInfo.LastModified > targetInfo.LastModified ||
+                        sourceInfo.Size != targetInfo.Size;
+
+                    if (mustCopy)
                     {
-                        encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
+                        Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
+
+                        var stopwatch = Stopwatch.StartNew();
+                        bool success = storage.CopyFile(sourceFile, destinationFile);
+                        stopwatch.Stop();
+
+                        long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
+
+                        int encryptionTime = 0;
+                        if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                        {
+                            encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
+                        }
+
+                        logger.LogEntry(new LogEntry
+                        {
+                            Timestamp = DateTime.Now,
+                            JobName = context.JobName,
+                            SourcePath = sourceFile,
+                            DestinationPath = destinationFile,
+                            FileSize = sourceInfo.Size,
+                            TransferTimeMs = transferTime,
+                            EncryptionTimeMs = encryptionTime
+                        });
                     }
 
-                    logger.LogEntry(new LogEntry
-                    {
-                        Timestamp = DateTime.Now,
-                        JobName = context.JobName,
-                        SourcePath = sourceFile,
-                        DestinationPath = destinationFile,
-                        FileSize = sourceInfo.Size,
-                        TransferTimeMs = transferTime,
-                        EncryptionTimeMs = encryptionTime
-                    });
+                    processedFiles++;
+                    processedSize += sourceInfo.Size;
+
+                    var snapshot = new StatusSnapshot(
+                        context.JobName,
+                        DateTime.Now,
+                        "Active",
+                        totalFiles,
+                        totalSize,
+                        processedFiles,
+                        processedSize,
+                        sourceFile,
+                        mustCopy ? destinationFile : null
+                    );
+
+                    foreach (var obs in observers)
+                        obs.OnJobUpdated(snapshot);
                 }
 
-                processedFiles++;
-                processedSize += sourceInfo.Size;
-
-                var snapshot = new StatusSnapshot(
+                var finalSnapshot = new StatusSnapshot(
                     context.JobName,
                     DateTime.Now,
-                    "Active",
+                    "Inactive",
                     totalFiles,
                     totalSize,
                     processedFiles,
                     processedSize,
-                    sourceFile,
-                    mustCopy ? destinationFile : null
+                    null,
+                    null
                 );
 
                 foreach (var obs in observers)
-                    obs.OnJobUpdated(snapshot);
+                    obs.OnJobUpdated(finalSnapshot);
             }
+            catch (OperationCanceledException)
+            {
+                var stoppedSnapshot = new StatusSnapshot(
+                    context.JobName,
+                    DateTime.Now,
+                    "Stopped",
+                    totalFiles,
+                    totalSize,
+                    processedFiles,
+                    processedSize,
+                    null,
+                    null
+                );
 
-            var finalSnapshot = new StatusSnapshot(
-                context.JobName,
-                DateTime.Now,
-                "Inactive",
-                totalFiles,
-                totalSize,
-                processedFiles,
-                processedSize,
-                null,
-                null
-            );
-
-            foreach (var obs in observers)
-                obs.OnJobUpdated(finalSnapshot);
+                foreach (var obs in observers)
+                    obs.OnJobUpdated(stoppedSnapshot);
+            }
         }
     }
 }

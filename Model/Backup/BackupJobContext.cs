@@ -48,6 +48,7 @@ namespace EasySave.Model.Backup
         /// Config object providing access to encryption settings.
         /// </summary>
         public AppConfig Config { get; }
+        public JobControlToken? ControlToken { get; }
 
         public BackupJobContext(
             string jobName,
@@ -56,7 +57,8 @@ namespace EasySave.Model.Backup
             IStorage storage,
             ILogger logger,
             IReadOnlyList<IBackupObserver> observers,
-            AppConfig config)
+            AppConfig config,
+            JobControlToken? controlToken = null)
         {
             JobName = jobName;
             SourcePath = sourcePath;
@@ -65,6 +67,7 @@ namespace EasySave.Model.Backup
             Logger = logger;
             Observers = observers;
             Config = config;
+            ControlToken = controlToken;
         }
     }
 }

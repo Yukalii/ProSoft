@@ -74,16 +74,26 @@ namespace EasySave.Model.Backup
         /// </summary>
         public void Execute()
         {
-            var context = new BackupJobContext(
+            var context = BuildContext(null);
+            Strategy.Execute(context);
+        }
+        public void Execute(JobControlToken controlToken)
+        {
+            var context = BuildContext(controlToken);
+            Strategy.Execute(context);
+        }
+
+        private BackupJobContext BuildContext(JobControlToken? controlToken)
+        {
+            return new BackupJobContext(
                 Name,
                 SourcePath,
                 TargetPath,
                 _storage,
                 _logger,
                 _observers,
-                _config);
-
-            Strategy.Execute(context);
+                _config,
+                controlToken);
         }
     }
 }

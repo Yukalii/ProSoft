@@ -13,7 +13,6 @@ namespace EasySave.ViewModel
         public ObservableCollection<RunningJobViewModel> RunningJobs { get; }
             = new ObservableCollection<RunningJobViewModel>();
 
-        //  Global progress
         private int _globalTotalFiles;
         public int GlobalTotalFiles
         {
@@ -33,6 +32,14 @@ namespace EasySave.ViewModel
         public ICommand StartSingleJobCommand { get; }
         public ICommand StartMultipleJobsCommand { get; }
 
+        public ICommand PauseSingleJobCommand { get; }
+        public ICommand PlaySingleJobCommand { get; }
+        public ICommand StopSingleJobCommand { get; }
+
+        public ICommand PauseAllCommand { get; }
+        public ICommand PlayAllCommand { get; }
+        public ICommand StopAllCommand { get; }
+
         public BackupExecutionViewModel(BackupJobManager jobManager)
         {
             _jobManager = jobManager;
@@ -48,11 +55,61 @@ namespace EasySave.ViewModel
                 if (jobs is IEnumerable<BackupJob> list)
                     StartMultipleJobs(list);
             });
+
+            PauseSingleJobCommand = new RelayCommand(jobName =>
+            {
+                if (jobName is string name)
+                {
+                    _jobManager.PauseJob(name);
+                    GetJobVm(name)?.SetPaused(true);
+                }
+            });
+
+            PlaySingleJobCommand = new RelayCommand(jobName =>
+            {
+                if (jobName is string name)
+                {
+                    _jobManager.PlayJob(name);
+                    GetJobVm(name)?.SetPaused(false);
+                }
+            });
+
+            StopSingleJobCommand = new RelayCommand(jobName =>
+            {
+                if (jobName is string name)
+                {
+                    _jobManager.StopJob(name);
+                    GetJobVm(name)?.SetStopped();
+                }
+            });
+
+            PauseAllCommand = new RelayCommand(_ =>
+            {
+                _jobManager.PauseAll();
+                foreach (var vm in RunningJobs)
+                    vm.SetPaused(true);
+            });
+
+            PlayAllCommand = new RelayCommand(_ =>
+            {
+                _jobManager.PlayAll();
+                foreach (var vm in RunningJobs)
+                    vm.SetPaused(false);
+            });
+
+            StopAllCommand = new RelayCommand(_ =>
+            {
+                _jobManager.StopAll();
+                foreach (var vm in RunningJobs)
+                    vm.SetStopped();
+            });
         }
 
-        //  Start jobs
         public void StartSingleJob(string jobName)
         {
+            var existing = RunningJobs.FirstOrDefault(x => x.JobName == jobName);
+            if (existing != null) return;
+
             var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
             RunningJobs.Add(vm);
 
@@ -64,6 +121,9 @@ namespace EasySave.ViewModel
         {
             foreach (var job in jobs)
             {
+                if (RunningJobs.Any(x => x.JobName == job.Name))
+                    continue;
+
                 var vm = new RunningJobViewModel(job.Name, RefreshRunningJobs);
                 RunningJobs.Add(vm);
 
@@ -72,8 +132,6 @@ namespace EasySave.ViewModel
             }
         }
 
-
-        //  Refresh global progress
         public void RefreshRunningJobs()
         {
             GlobalTotalFiles = RunningJobs.Sum(j => j.TotalFiles);
@@ -81,9 +139,13 @@ namespace EasySave.ViewModel
 
             OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
         }
+
+        private RunningJobViewModel? GetJobVm(string name)
+        {
+            return RunningJobs.FirstOrDefault(v => v.JobName == name);
+        }
     }
 
-    //  Per-job View-model
     public class RunningJobViewModel : ViewModelBase, IBackupObserver
     {
         public string JobName { get; }
@@ -139,6 +201,26 @@ namespace EasySave.ViewModel
             private set => SetProperty(ref _currentDestinationFile, value);
         }
 
+        private bool _isPaused;
+        public bool IsPaused
+        {
+            get => _isPaused;
+            private set
+            {
+                if (SetProperty(ref _isPaused, value))
+                    OnPropertyChanged(nameof(IsRunningAndNotPaused));
+            }
+        }
+
+        private bool _isStopped;
+        public bool IsStopped
+        {
+            get => _isStopped;
+            private set => SetProperty(ref _isStopped, value);
+        }
+
+        public bool IsRunningAndNotPaused => State == "Active" && !IsPaused && !IsStopped;
+
         public RunningJobViewModel(string jobName, Action onUpdated)
         {
             JobName = jobName;
@@ -154,12 +236,36 @@ namespace EasySave.ViewModel
             }
         }
 
-        // Called by StatusTracker
+        public void SetPaused(bool paused)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                IsPaused = paused;
+                if (paused)
+                    State = "Paused";
+                else if (!IsStopped)
+                    State = "Active";
+            });
+        }
+
+        public void SetStopped()
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                IsStopped = true;
+                IsPaused = false;
+                State = "Stopped";
+                OnPropertyChanged(nameof(IsRunningAndNotPaused));
+            });
+        }
+
         public void OnJobUpdated(StatusSnapshot snapshot)
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                State = snapshot.State;
+                if (!IsPaused && !IsStopped)
+                    State = snapshot.State;
+
                 TotalFiles = snapshot.TotalFiles;
                 TotalSize = snapshot.TotalSize;
                 ProcessedFiles = snapshot.ProcessedFiles;
@@ -167,7 +273,17 @@ namespace EasySave.ViewModel
                 CurrentSourceFile = snapshot.CurrentSourceFile;
                 CurrentDestinationFile = snapshot.CurrentDestinationFile;
 
+                if (snapshot.State == "Stopped")
+                    SetStopped();
+
+                if (snapshot.State == "Inactive")
+                {
+                    IsPaused = false;
+                    IsStopped = false;
+                }
+
                 OnPropertyChanged(nameof(Percentage));
+                OnPropertyChanged(nameof(IsRunningAndNotPaused));
                 _onUpdated?.Invoke();
             });
         }

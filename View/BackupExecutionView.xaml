@@ -3,22 +3,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="24" MaxWidth="600" HorizontalAlignment="Left">
+        <StackPanel Margin="24" MaxWidth="700" HorizontalAlignment="Left">
 
             <TextBlock Text="{Binding DataContext.Loc[exec_title], RelativeSource={RelativeSource AncestorType=Window}}"
                        FontSize="18" FontWeight="Bold" Margin="0,0,0,24"/>
 
-
-            <!--   GLOBAL PROGRESS SECTION -->
             <TextBlock Text="{Binding DataContext.Loc[ExecSectionProgressGlobal], RelativeSource={RelativeSource AncestorType=Window}}"
                        FontSize="13" FontWeight="SemiBold" Foreground="#555" Margin="0,0,0,8"/>
 
             <Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="6"
-                    Padding="16" Margin="0,0,0,24">
+                    Padding="16" Margin="0,0,0,12">
 
                 <StackPanel>
-
-                    <!-- Files X / Y -->
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="140"/>
@@ -39,46 +35,73 @@
                         </TextBlock>
                     </Grid>
 
-                    <!-- Global progress bar -->
                     <ProgressBar Height="14"
                                  Minimum="0"
                                  Maximum="{Binding GlobalTotalFilesDisplay, Mode=OneWay}"
                                  Value="{Binding GlobalProcessedFiles, Mode=OneWay}"
-                                 Margin="0,0,0,8"/>
+                                 Margin="0,0,0,12"/>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Play all"
+                                Command="{Binding PlayAllCommand}"
+                                Margin="0,0,8,0"
+                                Padding="12,6"/>
+
+                        <Button Content="Pause all"
+                                Command="{Binding PauseAllCommand}"
+                                Margin="0,0,8,0"
+                                Padding="12,6"/>
+
+                        <Button Content="Stop all"
+                                Command="{Binding StopAllCommand}"
+                                Padding="12,6"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
-
-            <!--   RUNNING JOBS SECTION    -->
             <TextBlock Text="{Binding DataContext.Loc[ExecSectionRunningJobs], RelativeSource={RelativeSource AncestorType=Window}}"
                        FontSize="13" FontWeight="SemiBold" Foreground="#555" Margin="0,0,0,8"/>
 
             <ItemsControl ItemsSource="{Binding RunningJobs}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-
-                        <!-- Accordion -->
                         <Expander Margin="0,0,0,12">
-
-                            <!-- HEADER -->
                             <Expander.Header>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding JobName}"
-                                               FontWeight="SemiBold"
-                                               Margin="0,0,12,0"/>
-                                    <TextBlock Text="{Binding State}"
-                                               Foreground="#666"/>
-                                </StackPanel>
+                                <DockPanel LastChildFill="False">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding JobName}"
+                                                   FontWeight="SemiBold"
+                                                   Margin="0,0,12,0"/>
+                                        <TextBlock Text="{Binding State}"
+                                                   Foreground="#666"/>
+                                    </StackPanel>
+                                </DockPanel>
                             </Expander.Header>
 
-
-                            <!-- DETAILS -->
                             <Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="6"
                                     Padding="16" Margin="0,8,0,0">
 
                                 <StackPanel>
 
-                                    <!-- Total files -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                        <Button Content="Play"
+                                                Command="{Binding DataContext.PlaySingleJobCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding JobName}"
+                                                Margin="0,0,8,0"
+                                                Padding="12,6"/>
+
+                                        <Button Content="Pause"
+                                                Command="{Binding DataContext.PauseSingleJobCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding JobName}"
+                                                Margin="0,0,8,0"
+                                                Padding="12,6"/>
+
+                                        <Button Content="Stop"
+                                                Command="{Binding DataContext.StopSingleJobCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding JobName}"
+                                                Padding="12,6"/>
+                                    </StackPanel>
+
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140"/>
@@ -93,7 +116,6 @@
                                                    FontWeight="SemiBold"/>
                                     </Grid>
 
-                                    <!-- Processed files -->
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140"/>
@@ -108,7 +130,6 @@
                                                    FontWeight="SemiBold"/>
                                     </Grid>
 
-                                    <!-- Percentage -->
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140"/>
@@ -119,13 +140,11 @@
                                                    Text="{Binding DataContext.Loc[ExecPercentage], RelativeSource={RelativeSource AncestorType=Window}}"
                                                    Foreground="#888"/>
 
-                                        <!-- Percentage property -->
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Percentage, StringFormat={}{0}%}"
                                                    FontWeight="SemiBold"/>
                                     </Grid>
 
-                                    <!-- Current file -->
                                     <TextBlock Text="{Binding DataContext.Loc[ExecCurrentFile], RelativeSource={RelativeSource AncestorType=Window}}"
                                                Foreground="#888" Margin="0,8,0,4"/>
 
@@ -136,12 +155,9 @@
                                     <TextBlock Text="{Binding CurrentDestinationFile}"
                                                FontSize="11" Foreground="#666"
                                                TextTrimming="CharacterEllipsis"/>
-
                                 </StackPanel>
                             </Border>
-
                         </Expander>
-
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
