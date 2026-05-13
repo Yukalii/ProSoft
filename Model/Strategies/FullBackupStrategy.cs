@@ -15,18 +15,9 @@ namespace EasySave.Model.Strategies
     {
         public async Task ExecuteAsync(BackupJobContext context)
         {
-            var storage = context.Storage;
-            var logger = context.Logger;
-            var observers = context.Observers;
-            var control = context.ControlToken;
-
-            var allFiles = storage.EnumerateFiles(context.SourcePath).ToList();
-            long totalSize = 0;
-
-            foreach (var f in allFiles)
-                totalSize += storage.GetFileInfo(f).Size;
+            var allFiles = context.Storage.EnumerateFiles(context.SourcePath).ToList();
+            long totalSize = allFiles.Sum(f => context.Storage.GetFileInfo(f).Size);
             int totalFiles = allFiles.Count;
-
             long processedSize = 0;
             int processedFiles = 0;
 
@@ -34,101 +25,64 @@ namespace EasySave.Model.Strategies
             {
                 foreach (var sourceFile in allFiles)
                 {
-                    control?.WaitIfPaused();
+                    context.ControlToken?.WaitIfPaused();
+                    context.ControlToken?.Token.ThrowIfCancellationRequested();
 
                     string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
                     string destinationFile = Path.Combine(context.TargetPath, relativePath);
-
                     Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
 
-                    var fileInfo = storage.GetFileInfo(sourceFile);
+                    var fileInfo = context.Storage.GetFileInfo(sourceFile);
+                    // Conversion KB en Bytes pour la comparaison
+                    bool isLarge = fileInfo.Size > (context.LargeFileThresholdKb * 1024);
 
-                    bool isLarge = fileInfo.Size > context.LargeFileThresholdKb * 1024;
-
-                    // Debug.WriteLine($"File size: {fileInfo.Size} bytes, threshold: {context.LargeFileThresholdKb * 1024}");
-                    // Limit large file concurrency
+                    Debug.WriteLine($"{fileInfo.Size}");
                     if (isLarge)
                     {
-                        // Debug.WriteLine($"[WAIT] Large file detected ({sourceFile}). Waiting for semaphore...");
-                        await context.LargeFileSemaphore.WaitAsync();
-                        // Debug.WriteLine($"[ENTER] Semaphore acquired for large file: {sourceFile}");
+                        Debug.WriteLine("Wait");
+                        await context.LargeFileSemaphore.WaitAsync(context.ControlToken?.Token ?? CancellationToken.None);
+                        Debug.WriteLine("Enter");
                     }
+
                     try
                     {
-                        var stopwatch = Stopwatch.StartNew();
-                        bool success = storage.CopyFile(sourceFile, destinationFile, control); ;
-                        stopwatch.Stop();
+                        var sw = Stopwatch.StartNew();
+                        bool success = context.Storage.CopyFile(sourceFile, destinationFile, context.ControlToken);
+                        sw.Stop();
 
-                        long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
+                        int encTime = (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                            ? CryptoSoftInvoker.EncryptFile(destinationFile, context.Config) : 0;
 
-                        // Encrypt backup if needed
-                        int encryptionTime = 0;
-                        if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
-                        {
-                            encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
-                        }
+                        context.Logger.LogEntry(new LogEntry { });
 
-                        // Log the action
-                        logger.LogEntry(new LogEntry
-                        {
-                            Timestamp = DateTime.Now,
-                            JobName = context.JobName,
-                            SourcePath = sourceFile,
-                            DestinationPath = destinationFile,
-                            FileSize = fileInfo.Size,
-                            TransferTimeMs = transferTime,
-                            EncryptionTimeMs = encryptionTime
-                        });
-
-                        // Update progress
                         processedFiles++;
                         processedSize += fileInfo.Size;
 
-                        // Notify observers
-                        var snapshot = new StatusSnapshot(
-                            context.JobName,
-                            DateTime.Now,
-                            "Active",
-                            totalFiles,
-                            totalSize,
-                            processedFiles,
-                            processedSize,
-                            sourceFile,
-                            destinationFile
-                        );
-
-                        foreach (var obs in observers)
-                            obs.OnJobUpdated(snapshot);
-
-                        Notify(observers, new StatusSnapshot(
+                        // UN SEUL APPEL de notification
+                        Notify(context.Observers, new StatusSnapshot(
                             context.JobName, DateTime.Now, "Active",
                             totalFiles, totalSize, processedFiles, processedSize,
                             sourceFile, destinationFile));
                     }
                     finally
                     {
-                        // Release semaphore only for large files
                         if (isLarge)
                         {
-                            // Debug.WriteLine($"[EXIT] Semaphore released for large file: {sourceFile}");
                             context.LargeFileSemaphore.Release();
+                            Debug.WriteLine("Exit");
                         }
-                    }    
+                    }
                 }
 
-                Notify(observers, new StatusSnapshot(
-                    context.JobName, DateTime.Now, "Inactive",
-                    totalFiles, totalSize, processedFiles, processedSize,
-                    null, null));
+                Notify(context.Observers, new StatusSnapshot(context.JobName, DateTime.Now, "Inactive", totalFiles, totalSize, processedFiles, processedSize, null, null));
             }
             catch (OperationCanceledException)
             {
-                Notify(observers, new StatusSnapshot(
-                    context.JobName, DateTime.Now, "Stopped",
-                    totalFiles, totalSize, processedFiles, processedSize,
-                    null, null));
+                Notify(context.Observers, new StatusSnapshot(context.JobName, DateTime.Now, "Stopped", totalFiles, totalSize, processedFiles, processedSize, null, null));
+                throw;
             }
         }
+
         private static void Notify(
             IEnumerable<IBackupObserver> observers, StatusSnapshot snapshot)
         {

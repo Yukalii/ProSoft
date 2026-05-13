@@ -107,25 +107,20 @@ namespace EasySave.ViewModel
         {
             if (RunningJobs.Any(x => x.JobName == jobName)) return;
 
-            var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
-            RunningJobs.Add(vm);
-
-            _jobManager.RegisterJobObserver(jobName, vm);
-            _ = _jobManager.ExecuteJob(jobName);
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
+                RunningJobs.Add(vm);
+                _jobManager.RegisterJobObserver(jobName, vm);
+                _ = _jobManager.ExecuteJob(jobName);
+            });
         }
 
         public void StartMultipleJobs(IEnumerable<BackupJob> jobs)
         {
             foreach (var job in jobs)
             {
-                if (RunningJobs.Any(x => x.JobName == job.Name))
-                    continue;
-
-                var vm = new RunningJobViewModel(job.Name, RefreshRunningJobs);
-                RunningJobs.Add(vm);
-
-                _jobManager.RegisterJobObserver(job.Name, vm);
-                _ = _jobManager.ExecuteJob(job.Name);
+                StartSingleJob(job.Name);
             }
         }
 

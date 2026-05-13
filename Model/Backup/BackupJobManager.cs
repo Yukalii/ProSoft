@@ -107,93 +107,94 @@ public class BackupJobManager
             _controlTokens[name] = controlToken;
         }
 
-        try
+        _ = Task.Run(async () =>
         {
-            // Wait for business software to close
-            while (_businessSoftware.SoftwareIsRunning())
+            try
             {
-                controlToken.Token.ThrowIfCancellationRequested();
-                await Task.Delay(2000, controlToken.Token);
-            }
+                // Wait for business software to close
+                while (_businessSoftware.SoftwareIsRunning())
+                {
+                    controlToken.Token.ThrowIfCancellationRequested();
+                    await Task.Delay(2000, controlToken.Token);
+                }
 
-            var job = Jobs.Find(j => j.Name == name);
-            if (job == null)
-                return;
+                var job = Jobs.Find(j => j.Name == name);
+                if (job == null)
+                    return;
 
-            var storage = new LocalStorage();
-            var logger = new JsonLogger(_config.LogDirectory);
+                var storage = new LocalStorage();
+                var logger = new JsonLogger(_config.LogDirectory);
 
-            // Create a unique status file for this job
-            string statusFile = Path.Combine(
-                _config.StatusFilePath,
-                $"{name}_status.json"
-            );
+                // Create a unique status file for this job
+                string statusFile = Path.Combine(
+                    _config.StatusFilePath,
+                    $"{name}_status.json"
+                );
 
-            var statusTracker = new StatusTracker(statusFile);
+                var statusTracker = new StatusTracker(statusFile);
 
-            var strategy = CreateStrategy(job.Strategy.GetType().Name);
+                var strategy = CreateStrategy(job.Strategy.GetType().Name);
 
-            // Create a fresh job instance for this execution
-            var jobInstance = new BackupJob(
-                job.Name,
-                job.SourcePath,
-                job.TargetPath,
-                strategy,
-                storage,
-                logger,
-                _config,
-                _largeFileSemaphore,
-                LargeFileThresholdKb
-            );
+                // Create a fresh job instance for this execution
+                var jobInstance = new BackupJob(
+                    job.Name,
+                    job.SourcePath,
+                    job.TargetPath,
+                    strategy,
+                    storage,
+                    logger,
+                    _config,
+                    _largeFileSemaphore,
+                    LargeFileThresholdKb
+                );
 
-            // Attach all observers (UI observers)
-            lock (_globalObservers)
-                foreach (var obs in _globalObservers)
-                    jobInstance.AttachObserver(obs);
-
-            lock (_jobObservers)
-                if (_jobObservers.TryGetValue(name, out var dedicated))
-                    foreach (var obs in dedicated)
+                // Attach all observers (UI observers)
+                lock (_globalObservers)
+                    foreach (var obs in _globalObservers)
                         jobInstance.AttachObserver(obs);
 
-            jobInstance.AttachObserver(statusTracker);
+                lock (_jobObservers)
+                    if (_jobObservers.TryGetValue(name, out var dedicated))
+                        foreach (var obs in dedicated)
+                            jobInstance.AttachObserver(obs);
 
-            //  Run job in background
-            var task = jobInstance.ExecuteAsync(controlToken);
+                jobInstance.AttachObserver(statusTracker);
 
-            lock (_runningJobs)
-            {
-                _runningJobs[name] = task;
-            }
+                //  Run job in background
+                var task = jobInstance.ExecuteAsync(controlToken);
 
-            await task;
-
-            lock (_runningJobs) { _runningJobs.Remove(name); }
-        }
-        catch (OperationCanceledException)
-        {
-            lock (_runningJobs) { _runningJobs.Remove(name); }
-        }
-        finally
-        {
-            lock (_waitingJobs)
-            {
-                _waitingJobs.Remove(name);
-            }
-            lock (_jobObservers) 
-            {
-                _jobObservers.Remove(name);
-            }
-            lock (_controlTokens)
-            {
-                if (_controlTokens.TryGetValue(name, out var token))
+                lock (_runningJobs)
                 {
-                    token.Dispose();
-                    _controlTokens.Remove(name);
+                    _runningJobs[name] = task;
+                }
+
+                await task;
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { Debug.WriteLine($"Error in {name}: {ex.Message}"); }
+            finally
+            {
+                lock (_waitingJobs)
+                {
+                    _waitingJobs.Remove(name);
+                }
+                lock (_jobObservers)
+                {
+                    _jobObservers.Remove(name);
+                }
+                lock (_controlTokens)
+                {
+                    if (_controlTokens.TryGetValue(name, out var token))
+                    {
+                        token.Dispose();
+                        _controlTokens.Remove(name);
+                    }
                 }
             }
-        }
+        });
+        await Task.CompletedTask;
     }
+
 
     //Individual job control
     public void PlayJob(string name)
