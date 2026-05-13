@@ -42,17 +42,17 @@
                                  Margin="0,0,0,12"/>
 
                     <StackPanel Orientation="Horizontal">
-                        <Button Content="Play all"
+                        <Button Content="{Binding DataContext.Loc[exec_play_all_button], RelativeSource={RelativeSource AncestorType=Window}}"
                                 Command="{Binding PlayAllCommand}"
                                 Margin="0,0,8,0"
                                 Padding="12,6"/>
 
-                        <Button Content="Pause all"
+                        <Button Content="{Binding DataContext.Loc[exec_pause_all_button], RelativeSource={RelativeSource AncestorType=Window}}"
                                 Command="{Binding PauseAllCommand}"
                                 Margin="0,0,8,0"
                                 Padding="12,6"/>
 
-                        <Button Content="Stop all"
+                        <Button Content="{Binding DataContext.Loc[exec_stop_all_button], RelativeSource={RelativeSource AncestorType=Window}}"
                                 Command="{Binding StopAllCommand}"
                                 Padding="12,6"/>
                     </StackPanel>
@@ -84,19 +84,19 @@
                                 <StackPanel>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <Button Content="Play"
+                                        <Button Content="{Binding DataContext.Loc[exec_play_button], RelativeSource={RelativeSource AncestorType=Window}}"
                                                 Command="{Binding DataContext.PlaySingleJobCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding JobName}"
                                                 Margin="0,0,8,0"
                                                 Padding="12,6"/>
 
-                                        <Button Content="Pause"
+                                        <Button Content="{Binding DataContext.Loc[exec_pause_button], RelativeSource={RelativeSource AncestorType=Window}}"
                                                 Command="{Binding DataContext.PauseSingleJobCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding JobName}"
                                                 Margin="0,0,8,0"
                                                 Padding="12,6"/>
 
-                                        <Button Content="Stop"
+                                        <Button Content="{Binding DataContext.Loc[exec_stop_button], RelativeSource={RelativeSource AncestorType=Window}}"
                                                 Command="{Binding DataContext.StopSingleJobCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding JobName}"
                                                 Padding="12,6"/>

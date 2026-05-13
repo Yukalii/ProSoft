@@ -1,3 +1,5 @@
+using EasySave.Model.Backup;
+
 namespace EasySave.Model.Storage
 {
     /// <summary>
@@ -5,6 +7,8 @@ namespace EasySave.Model.Storage
     /// </summary>
     public class LocalStorage : IStorage
     {
+        private const int BufferSize = 81920;
+
         // Go through each file in a directory
         public IEnumerable<string> EnumerateFiles(string directoryPath)
         {
@@ -16,11 +20,34 @@ namespace EasySave.Model.Storage
         }
 
         public bool CopyFile(string sourcePath, string destinationPath)
+            => CopyFile(sourcePath, destinationPath, null);
+
+        public bool CopyFile(string sourcePath, string destinationPath,
+                             JobControlToken? controlToken)
         {
             try
             {
-                File.Copy(sourcePath, destinationPath, overwrite: true);
+                using var src = new FileStream(sourcePath, FileMode.Open,
+                                                FileAccess.Read, FileShare.Read,
+                                                BufferSize, FileOptions.SequentialScan);
+                using var dest = new FileStream(destinationPath, FileMode.Create,
+                                                FileAccess.Write, FileShare.None,
+                                                BufferSize);
+
+                var buffer = new byte[BufferSize];
+                int read;
+                while ((read = src.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    // Throws OperationCanceledException if Stop() was called
+                    controlToken?.Token.ThrowIfCancellationRequested();
+                    dest.Write(buffer, 0, read);
+                }
                 return true;
+            }
+            catch (OperationCanceledException)
+            {
+                // Propagate so the strategy can emit a "Stopped" snapshot
+                throw;
             }
             catch
             {
@@ -34,11 +61,7 @@ namespace EasySave.Model.Storage
                 return new FileMetadata(false, 0, DateTime.MinValue);
 
             var info = new FileInfo(filePath);
-            return new FileMetadata(
-                exists: true,
-                size: info.Length,
-                lastModified: info.LastWriteTime
-            );
+            return new FileMetadata(true, info.Length, info.LastWriteTime);
         }
     }
 }

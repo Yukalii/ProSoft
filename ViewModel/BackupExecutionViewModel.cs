@@ -100,20 +100,17 @@ namespace EasySave.ViewModel
             StopAllCommand = new RelayCommand(_ =>
             {
                 _jobManager.StopAll();
-                foreach (var vm in RunningJobs)
-                    vm.SetStopped();
             });
         }
 
         public void StartSingleJob(string jobName)
         {
-            var existing = RunningJobs.FirstOrDefault(x => x.JobName == jobName);
-            if (existing != null) return;
+            if (RunningJobs.Any(x => x.JobName == jobName)) return;
 
             var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
             RunningJobs.Add(vm);
 
-            _jobManager.RegisterObserver(vm);
+            _jobManager.RegisterJobObserver(jobName, vm);
             _ = _jobManager.ExecuteJob(jobName);
         }
 
@@ -127,7 +124,7 @@ namespace EasySave.ViewModel
                 var vm = new RunningJobViewModel(job.Name, RefreshRunningJobs);
                 RunningJobs.Add(vm);
 
-                _jobManager.RegisterObserver(vm);
+                _jobManager.RegisterJobObserver(job.Name, vm);
                 _ = _jobManager.ExecuteJob(job.Name);
             }
         }
@@ -236,15 +233,14 @@ namespace EasySave.ViewModel
             }
         }
 
+
         public void SetPaused(bool paused)
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
                 IsPaused = paused;
                 if (paused)
-                    State = "Paused";
-                else if (!IsStopped)
-                    State = "Active";
+                    State = paused ? "Paused" : (IsStopped ? "Stopped" : "Active");
             });
         }
 
@@ -261,6 +257,8 @@ namespace EasySave.ViewModel
 
         public void OnJobUpdated(StatusSnapshot snapshot)
         {
+            if (snapshot.JobName != JobName) return;
+
             Application.Current.Dispatcher.Invoke(() =>
             {
                 if (!IsPaused && !IsStopped)

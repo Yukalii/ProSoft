@@ -2,6 +2,8 @@
 using EasySave.Model.Encryption;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
+using System.Diagnostics;
+using System.Linq;
 
 namespace EasySave.Model.Strategies
 {
@@ -19,23 +21,19 @@ namespace EasySave.Model.Strategies
             var observers = context.Observers;
             var control = context.ControlToken;
 
-            var allFiles = storage.EnumerateFiles(context.SourcePath);
+            var allFiles = storage.EnumerateFiles(context.SourcePath).ToList();
             long totalSize = 0;
-            int totalFiles = 0;
 
-            foreach (var file in allFiles)
-            {
-                var info = storage.GetFileInfo(file);
-                totalSize += info.Size;
-                totalFiles++;
-            }
+            foreach (var f in allFiles)
+                totalSize += storage.GetFileInfo(f).Size;
+            int totalFiles = allFiles.Count;
 
             long processedSize = 0;
             int processedFiles = 0;
 
             try
             {
-                foreach (var sourceFile in storage.EnumerateFiles(context.SourcePath))
+                foreach (var sourceFile in allFiles)
                 {
                     control?.WaitIfPaused();
 
@@ -47,7 +45,7 @@ namespace EasySave.Model.Strategies
                     var fileInfo = storage.GetFileInfo(sourceFile);
 
                     var stopwatch = Stopwatch.StartNew();
-                    bool success = storage.CopyFile(sourceFile, destinationFile);
+                    bool success = storage.CopyFile(sourceFile, destinationFile, control);
                     stopwatch.Stop();
 
                     long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
@@ -72,54 +70,30 @@ namespace EasySave.Model.Strategies
                     processedFiles++;
                     processedSize += fileInfo.Size;
 
-                    var snapshot = new StatusSnapshot(
-                        context.JobName,
-                        DateTime.Now,
-                        "Active",
-                        totalFiles,
-                        totalSize,
-                        processedFiles,
-                        processedSize,
-                        sourceFile,
-                        destinationFile
-                    );
-
-                    foreach (var obs in observers)
-                        obs.OnJobUpdated(snapshot);
+                    Notify(observers, new StatusSnapshot(
+                        context.JobName, DateTime.Now, "Active",
+                        totalFiles, totalSize, processedFiles, processedSize,
+                        sourceFile, destinationFile));
                 }
 
-                var finalSnapshot = new StatusSnapshot(
-                    context.JobName,
-                    DateTime.Now,
-                    "Inactive",
-                    totalFiles,
-                    totalSize,
-                    processedFiles,
-                    processedSize,
-                    null,
-                    null
-                );
-
-                foreach (var obs in observers)
-                    obs.OnJobUpdated(finalSnapshot);
+                Notify(observers, new StatusSnapshot(
+                    context.JobName, DateTime.Now, "Inactive",
+                    totalFiles, totalSize, processedFiles, processedSize,
+                    null, null));
             }
             catch (OperationCanceledException)
             {
-                var stoppedSnapshot = new StatusSnapshot(
-                    context.JobName,
-                    DateTime.Now,
-                    "Stopped",
-                    totalFiles,
-                    totalSize,
-                    processedFiles,
-                    processedSize,
-                    null,
-                    null
-                );
-
-                foreach (var obs in observers)
-                    obs.OnJobUpdated(stoppedSnapshot);
+                Notify(observers, new StatusSnapshot(
+                    context.JobName, DateTime.Now, "Stopped",
+                    totalFiles, totalSize, processedFiles, processedSize,
+                    null, null));
             }
+        }
+        private static void Notify(
+            IEnumerable<IBackupObserver> observers, StatusSnapshot snapshot)
+        {
+            foreach (var obs in observers)
+                obs.OnJobUpdated(snapshot);
         }
     }
 }
