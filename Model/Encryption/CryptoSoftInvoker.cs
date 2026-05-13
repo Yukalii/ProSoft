@@ -5,40 +5,58 @@ namespace EasySave.Model.Encryption
 {
     public static class CryptoSoftInvoker
     {
-        public static int EncryptFile(string filePath, AppConfig config)
+        private static readonly SemaphoreSlim _cryptoLock = new SemaphoreSlim(1, 1);
+
+        public static async Task<int> EncryptFileAsync(string filePath, AppConfig config)
         {
-            string cryptoSoftFullPath = Path.Combine(
-                AppContext.BaseDirectory,
-                config.CryptoSoftPath
-            );
-
-            var psi = new ProcessStartInfo
+            // Wait until no other job is running CryptoSoft
+            await _cryptoLock.WaitAsync();
+            try
             {
-                FileName = cryptoSoftFullPath,
-                Arguments = $"\"{filePath}\" \"{config.CryptoSoftKey}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
+                string cryptoSoftFullPath = Path.Combine(
+                    AppContext.BaseDirectory,
+                    config.CryptoSoftPath
+                );
 
-            using var process = Process.Start(psi)
-                ?? throw new InvalidOperationException("Failed to start CryptoSoft process.");
+                var psi = new ProcessStartInfo
+                {
+                    FileName = cryptoSoftFullPath,
+                    Arguments = $"\"{filePath}\" \"{config.CryptoSoftKey}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
 
-            process.WaitForExit();
+                var sw = System.Diagnostics.Stopwatch.StartNew();
 
-            // Handle the single-instance restriction specifically
-            if (process.ExitCode == -1)
-                throw new InvalidOperationException(
-                    "CryptoSoft is already running on this machine. " +
-                    $"Backup job '{filePath}' has been paused.");
+                using var process = Process.Start(psi)
+                    ?? throw new InvalidOperationException("Failed to start CryptoSoft process.");
 
-            // Handle all other errors (-99 = internal exception, etc.)
-            if (process.ExitCode < 0)
-                throw new InvalidOperationException(
-                    $"CryptoSoft failed with exit code {process.ExitCode} " +
-                    $"(0x{process.ExitCode & 0xFFFFFFFF:X8}). File: {filePath}");
+                await process.WaitForExitAsync();
+                sw.Stop();
 
-            return process.ExitCode;
+                // Exit code -1 -> single-instance restriction (should no longer occur,
+                // but kept as a safety net in case CryptoSoft is launched externally)
+                if (process.ExitCode == -1)
+                    throw new InvalidOperationException(
+                        $"CryptoSoft rejected launch (single-instance). File: {filePath}");
+
+                // Any other negative exit code -> internal CryptoSoft error
+                if (process.ExitCode < 0)
+                    throw new InvalidOperationException(
+                        $"CryptoSoft failed with exit code {process.ExitCode} " +
+                        $"(0x{process.ExitCode & 0xFFFFFFFF:X8}). File: {filePath}");
+
+                return (int)sw.ElapsedMilliseconds;
+            }
+            finally
+            {
+                // Always release, even on exception, so the next job can proceed
+                _cryptoLock.Release();
+            }
         }
+
+        public static int EncryptFile(string filePath, AppConfig config)
+            => EncryptFileAsync(filePath, config).GetAwaiter().GetResult();
 
         public static bool ShouldEncrypt(string filePath, AppConfig config)
         {
