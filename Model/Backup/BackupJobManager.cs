@@ -32,7 +32,7 @@ public class BackupJobManager
         string jobsFilePath,
         IStorage storage,
         ILogger logger,
-        IBackupObserver statusObserver,
+        IBackupObserver? statusObserver,
         AppConfig config,
         IBusinessSoftwareManager businessSoftware)
     {
@@ -43,7 +43,8 @@ public class BackupJobManager
         _businessSoftware = businessSoftware;
 
         // Add initial observer
-        _observers.Add(statusObserver);
+        if (statusObserver != null)
+            _observers.Add(statusObserver);
 
         LoadJobs();
     }
@@ -83,26 +84,26 @@ public class BackupJobManager
                 $"{name}_status.json"
             );
 
-            var statusTracker = new StatusTracker(statusFile);
 
             var strategy = CreateStrategy(job.Strategy.GetType().Name);
 
             // Create a fresh job instance for this execution
             var jobInstance = new BackupJob(
-                job.Name,
-                job.SourcePath,
-                job.TargetPath,
-                strategy,
-                storage,
-                logger,
-                _config
-            );
+    job.Name,
+    job.SourcePath,
+    job.TargetPath,
+    strategy,
+    storage,
+    logger,
+    _config
+);
 
-            // Attach all observers (UI observers)
+            // ✅ Une seule déclaration ici
+            var statusTracker = new StatusTracker(statusFile);
+
             foreach (var obs in _observers)
                 jobInstance.AttachObserver(obs);
 
-            // Attach per-job StatusTracker
             jobInstance.AttachObserver(statusTracker);
 
             //  Run job in background
@@ -160,10 +161,6 @@ public class BackupJobManager
                 _sharedLogger,
                 _config
             );
-
-            // Attach all observers
-            foreach (var obs in _observers)
-                job.AttachObserver(obs);
 
             Jobs.Add(job);
         }
