@@ -50,6 +50,16 @@ namespace EasySave.Model.Backup
         public AppConfig Config { get; }
         public JobControlToken? ControlToken { get; }
 
+        /// <summary>
+        /// Semaphore managing the number of large file treated at any time.
+        /// </summary>
+        public SemaphoreSlim LargeFileSemaphore { get; }
+
+        /// <summary>
+        /// The threshold size of a large file.
+        /// </summary>
+        public int LargeFileThresholdKb { get; }
+
         public BackupJobContext(
             string jobName,
             string sourcePath,
@@ -58,7 +68,9 @@ namespace EasySave.Model.Backup
             ILogger logger,
             IReadOnlyList<IBackupObserver> observers,
             AppConfig config,
-            JobControlToken? controlToken = null)
+            JobControlToken? controlToken = null,
+            SemaphoreSlim largeFileSemaphore,
+            int largeFileThresholdKb)
         {
             JobName = jobName;
             SourcePath = sourcePath;
@@ -68,6 +80,8 @@ namespace EasySave.Model.Backup
             Observers = observers;
             Config = config;
             ControlToken = controlToken;
+            LargeFileSemaphore = largeFileSemaphore;
+            LargeFileThresholdKb = largeFileThresholdKb;
         }
     }
 }

@@ -8,13 +8,12 @@ using System.Diagnostics;
 namespace EasySave.Model.Strategies
 {
     /// <summary>
-    /// Implements a differential backup strategy.
-    /// Copies only files that are new or modified compared to the target.
-    /// Logs each action and notifies observers of real-time progress.
+    /// Differential backup strategy with concurrency control:
+    /// Only one large file (> threshold KB) may be processed at a time.
     /// </summary>
     public class DifferentialBackupStrategy : IBackupStrategy
     {
-        public void Execute(BackupJobContext context)
+        public async Task ExecuteAsync(BackupJobContext context)
         {
             var storage = context.Storage;
             var logger = context.Logger;
@@ -36,22 +35,26 @@ namespace EasySave.Model.Strategies
 
             try
             {
-                foreach (var sourceFile in allFiles)
+                string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
+                string destinationFile = Path.Combine(context.TargetPath, relativePath);
+
+                var sourceInfo = storage.GetFileInfo(sourceFile);
+                var targetInfo = storage.GetFileInfo(destinationFile);
+
+                bool mustCopy =
+                    !targetInfo.Exists ||
+                    sourceInfo.LastModified > targetInfo.LastModified ||
+                    sourceInfo.Size != targetInfo.Size;
+
+                bool isLarge = sourceInfo.Size > context.LargeFileThresholdKb * 1024;
+
+                if (mustCopy)
                 {
-                    control?.WaitIfPaused();
+                    // Limit concurrency for large files
+                    if (isLarge)
+                        await context.LargeFileSemaphore.WaitAsync();
 
-                    string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
-                    string destinationFile = Path.Combine(context.TargetPath, relativePath);
-
-                    var sourceInfo = storage.GetFileInfo(sourceFile);
-                    var targetInfo = storage.GetFileInfo(destinationFile);
-
-                    bool mustCopy =
-                        !targetInfo.Exists ||
-                        sourceInfo.LastModified > targetInfo.LastModified ||
-                        sourceInfo.Size != targetInfo.Size;
-
-                    if (mustCopy)
+                    try
                     {
                         Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
 
@@ -86,6 +89,11 @@ namespace EasySave.Model.Strategies
                         context.JobName, DateTime.Now, "Active",
                         totalFiles, totalSize, processedFiles, processedSize,
                         sourceFile, mustCopy ? destinationFile : null));
+                    finally
+                    {
+                        if (isLarge)
+                            context.LargeFileSemaphore.Release();
+                    }
                 }
 
                 Notify(observers, new StatusSnapshot(

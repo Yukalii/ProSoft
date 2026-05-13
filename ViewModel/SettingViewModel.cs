@@ -9,7 +9,8 @@ namespace EasySave.ViewModel
         private readonly ConfigManager _configManager;
         private readonly LocalisationService _localisation;
         private readonly DynamicLogger _dynamicLogger;
-
+        private readonly int _largeFileThresholdKb;
+        
         public List<string> Languages { get; } = new List<string> { "en", "fr" };
         public List<string> LogFormats { get; } = new List<string> { "json", "xml" };
 
@@ -32,6 +33,16 @@ namespace EasySave.ViewModel
             {
                 _configManager.Config.LogFormat = value;
                 OnPropertyChanged();
+            }
+        }
+
+        public int LargeFileThresholdKb
+        {
+            get => _configManager.Config.LargeFileThresholdKb;
+            set
+            {
+                _configManager.Config.LargeFileThresholdKb = value;
+                OnPropertyChanged(); ; 
             }
         }
 
@@ -78,6 +89,7 @@ namespace EasySave.ViewModel
             _localisation = localisation;
             _configManager = configManager;
             _dynamicLogger = dynamicLogger;
+            _largeFileThresholdKb = configManager.Config.LargeFileThresholdKb;
 
             EncryptedExtensions = new ObservableCollection<string>(
                                        configManager.Config.EncryptedExtensions);
@@ -112,6 +124,7 @@ namespace EasySave.ViewModel
         public void SaveSettings()
         {
             _configManager.Config.EncryptedExtensions = EncryptedExtensions.ToList();
+            _configManager.Config.LargeFileThresholdKb = LargeFileThresholdKb;
             _configManager.Save();
 
             _localisation.LoadLanguage(_configManager.Config.Language);
