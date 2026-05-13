@@ -81,12 +81,12 @@ namespace EasySave.Model.Backup
         public async Task ExecuteAsync()
         {
             var context = BuildContext(null);
-            Strategy.Execute(context);
+            Strategy.ExecuteAsync(context);
         }
-        public void Execute(JobControlToken controlToken)
+        public void ExecuteAsync(JobControlToken controlToken)
         {
             var context = BuildContext(controlToken);
-            Strategy.Execute(context);
+            Strategy.ExecuteAsync(context);
         }
 
         private BackupJobContext BuildContext(JobControlToken? controlToken)
@@ -99,9 +99,23 @@ namespace EasySave.Model.Backup
                 _logger,
                 _observers,
                 _config,
-                controlToken,
                 _largeFileSemaphore,
-                _largeFileThresholdKb);
+                _largeFileThresholdKb,
+                controlToken);
+        }
+        private async Task ExecutreAsync()
+        {
+            var context = new BackupJobContext(
+                Name,
+                SourcePath,
+                TargetPath,
+                _storage,
+                _logger,
+                _observers,
+                _config,
+                _largeFileSemaphore,
+                _largeFileThresholdKb
+                );
 
             await Strategy.ExecuteAsync(context);
         }

@@ -35,64 +35,67 @@ namespace EasySave.Model.Strategies
 
             try
             {
-                string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
-                string destinationFile = Path.Combine(context.TargetPath, relativePath);
-
-                var sourceInfo = storage.GetFileInfo(sourceFile);
-                var targetInfo = storage.GetFileInfo(destinationFile);
-
-                bool mustCopy =
-                    !targetInfo.Exists ||
-                    sourceInfo.LastModified > targetInfo.LastModified ||
-                    sourceInfo.Size != targetInfo.Size;
-
-                bool isLarge = sourceInfo.Size > context.LargeFileThresholdKb * 1024;
-
-                if (mustCopy)
+                foreach (var sourceFile in allFiles)
                 {
-                    // Limit concurrency for large files
-                    if (isLarge)
-                        await context.LargeFileSemaphore.WaitAsync();
+                    string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
+                    string destinationFile = Path.Combine(context.TargetPath, relativePath);
 
-                    try
+                    var sourceInfo = storage.GetFileInfo(sourceFile);
+                    var targetInfo = storage.GetFileInfo(destinationFile);
+
+                    bool mustCopy =
+                        !targetInfo.Exists ||
+                        sourceInfo.LastModified > targetInfo.LastModified ||
+                        sourceInfo.Size != targetInfo.Size;
+
+                    bool isLarge = sourceInfo.Size > context.LargeFileThresholdKb * 1024;
+
+                    if (mustCopy)
                     {
-                        Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
-
-                        var stopwatch = Stopwatch.StartNew();
-                        bool success = storage.CopyFile(sourceFile, destinationFile, control);
-                        stopwatch.Stop();
-
-                        long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
-
-                        int encryptionTime = 0;
-                        if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
-                        {
-                            encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
-                        }
-
-                        logger.LogEntry(new LogEntry
-                        {
-                            Timestamp = DateTime.Now,
-                            JobName = context.JobName,
-                            SourcePath = sourceFile,
-                            DestinationPath = destinationFile,
-                            FileSize = sourceInfo.Size,
-                            TransferTimeMs = transferTime,
-                            EncryptionTimeMs = encryptionTime
-                        });
-                    }
-
-                    processedFiles++;
-                    processedSize += sourceInfo.Size;
-
-                    Notify(observers, new StatusSnapshot(
-                        context.JobName, DateTime.Now, "Active",
-                        totalFiles, totalSize, processedFiles, processedSize,
-                        sourceFile, mustCopy ? destinationFile : null));
-                    finally
-                    {
+                        // Limit concurrency for large files
                         if (isLarge)
-                            context.LargeFileSemaphore.Release();
+                            await context.LargeFileSemaphore.WaitAsync();
+
+                        try
+                        {
+                            Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
+
+                            var stopwatch = Stopwatch.StartNew();
+                            bool success = storage.CopyFile(sourceFile, destinationFile, control);
+                            stopwatch.Stop();
+
+                            long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
+
+                            int encryptionTime = 0;
+                            if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                            {
+                                encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
+                            }
+
+                            logger.LogEntry(new LogEntry
+                            {
+                                Timestamp = DateTime.Now,
+                                JobName = context.JobName,
+                                SourcePath = sourceFile,
+                                DestinationPath = destinationFile,
+                                FileSize = sourceInfo.Size,
+                                TransferTimeMs = transferTime,
+                                EncryptionTimeMs = encryptionTime
+                            });
+
+                            processedFiles++;
+                            processedSize += sourceInfo.Size;
+
+                            Notify(observers, new StatusSnapshot(
+                                context.JobName, DateTime.Now, "Active",
+                                totalFiles, totalSize, processedFiles, processedSize,
+                                sourceFile, mustCopy ? destinationFile : null));
+                        }
+                        finally
+                        {
+                            if (isLarge)
+                                context.LargeFileSemaphore.Release();
+                        }
                     }
                 }
 

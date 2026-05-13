@@ -159,7 +159,7 @@ public class BackupJobManager
             jobInstance.AttachObserver(statusTracker);
 
             //  Run job in background
-            var task = Task.Run(() => jobInstance.ExecuteAsync(controlToken));
+            var task = Task.Run(() => jobInstance.ExecuteAsync());
 
             lock (_runningJobs)
             {
@@ -269,12 +269,11 @@ public class BackupJobManager
             _sharedStorage, 
             _sharedLogger, 
             _config,
-            null,
             _largeFileSemaphore,
             LargeFileThresholdKb);
 
         // Attach all observers
-        foreach (var obs in _observers)
+        foreach (var obs in _globalObservers)
             job.AttachObserver(obs);
 
         Jobs.Add(job);
@@ -303,7 +302,7 @@ public class BackupJobManager
         Jobs = jobDtos.Select(dto => new BackupJob(
             dto.Name, dto.SourcePath, dto.TargetPath,
             CreateStrategy(dto.StrategyType),
-            _sharedStorage, _sharedLogger, _config)).ToList();
+            _sharedStorage, _sharedLogger, _config, _largeFileSemaphore, LargeFileThresholdKb)).ToList();
     }
 
     private void SaveJobs()

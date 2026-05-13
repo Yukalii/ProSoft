@@ -68,9 +68,9 @@ namespace EasySave.Model.Backup
             ILogger logger,
             IReadOnlyList<IBackupObserver> observers,
             AppConfig config,
-            JobControlToken? controlToken = null,
             SemaphoreSlim largeFileSemaphore,
-            int largeFileThresholdKb)
+            int largeFileThresholdKb,
+            JobControlToken? controlToken = null)
         {
             JobName = jobName;
             SourcePath = sourcePath;
