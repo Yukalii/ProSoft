@@ -98,7 +98,6 @@ public class BackupJobManager
     _config
 );
 
-            // ✅ Une seule déclaration ici
             var statusTracker = new StatusTracker(statusFile);
 
             foreach (var obs in _observers)
@@ -221,6 +220,11 @@ public class BackupJobManager
             "DifferentialBackupStrategy" => new DifferentialBackupStrategy(),
             _ => throw new InvalidOperationException($"Unknown strategy: {type}")
         };
+    }
+
+    public void ClearObservers()
+    {
+        _observers.Clear();
     }
 
     public void RegisterObserver(IBackupObserver observer)

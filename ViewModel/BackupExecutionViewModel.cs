@@ -1,6 +1,3 @@
-using System.Windows;
-using System.Collections.ObjectModel;
-using System.Windows.Input;
 using EasySave.Model.Backup;
 using EasySave.Model.Observers;
 
@@ -13,7 +10,6 @@ namespace EasySave.ViewModel
         public ObservableCollection<RunningJobViewModel> RunningJobs { get; }
             = new ObservableCollection<RunningJobViewModel>();
 
-        //  Global progress
         private int _globalTotalFiles;
         public int GlobalTotalFiles
         {
@@ -50,9 +46,13 @@ namespace EasySave.ViewModel
             });
         }
 
-        //  Start jobs
         public void StartSingleJob(string jobName)
         {
+            RunningJobs.Clear();
+            GlobalTotalFiles = 0;
+            GlobalProcessedFiles = 0;
+            _jobManager.ClearObservers();
+
             var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
             RunningJobs.Add(vm);
 
@@ -62,6 +62,11 @@ namespace EasySave.ViewModel
 
         public void StartMultipleJobs(IEnumerable<BackupJob> jobs)
         {
+            RunningJobs.Clear();
+            GlobalTotalFiles = 0;
+            GlobalProcessedFiles = 0;
+            _jobManager.ClearObservers();
+
             foreach (var job in jobs)
             {
                 var vm = new RunningJobViewModel(job.Name, RefreshRunningJobs);
@@ -72,18 +77,14 @@ namespace EasySave.ViewModel
             }
         }
 
-
-        //  Refresh global progress
         public void RefreshRunningJobs()
         {
             GlobalTotalFiles = RunningJobs.Sum(j => j.TotalFiles);
             GlobalProcessedFiles = RunningJobs.Sum(j => j.ProcessedFiles);
-
             OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
         }
     }
 
-    //  Per-job View-model
     public class RunningJobViewModel : ViewModelBase, IBackupObserver
     {
         public string JobName { get; }
@@ -139,12 +140,6 @@ namespace EasySave.ViewModel
             private set => SetProperty(ref _currentDestinationFile, value);
         }
 
-        public RunningJobViewModel(string jobName, Action onUpdated)
-        {
-            JobName = jobName;
-            _onUpdated = onUpdated;
-        }
-
         public int Percentage
         {
             get
@@ -154,7 +149,12 @@ namespace EasySave.ViewModel
             }
         }
 
-        // Called by StatusTracker
+        public RunningJobViewModel(string jobName, Action onUpdated)
+        {
+            JobName = jobName;
+            _onUpdated = onUpdated;
+        }
+
         public void OnJobUpdated(StatusSnapshot snapshot)
         {
             Application.Current.Dispatcher.Invoke(() =>
