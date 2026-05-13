@@ -86,8 +86,6 @@ public class BackupJobManager
 
 
             var strategy = CreateStrategy(job.Strategy.GetType().Name);
-
-            // Create a fresh job instance for this execution
             var jobInstance = new BackupJob(
     job.Name,
     job.SourcePath,
@@ -98,7 +96,6 @@ public class BackupJobManager
     _config
 );
 
-            // ✅ Une seule déclaration ici
             var statusTracker = new StatusTracker(statusFile);
 
             foreach (var obs in _observers)
@@ -106,7 +103,6 @@ public class BackupJobManager
 
             jobInstance.AttachObserver(statusTracker);
 
-            //  Run job in background
             var task = Task.Run(() =>
             {
                 jobInstance.Execute();

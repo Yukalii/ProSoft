@@ -165,6 +165,9 @@ namespace EasySave.ViewModel
 
         public void OnJobUpdated(StatusSnapshot snapshot)
         {
+            if (snapshot.JobName != JobName)
+                return;
+
             Application.Current.Dispatcher.Invoke(() =>
             {
                 State = snapshot.State;
