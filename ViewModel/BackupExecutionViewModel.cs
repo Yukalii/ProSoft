@@ -1,6 +1,3 @@
-using System.Windows;
-using System.Collections.ObjectModel;
-using System.Windows.Input;
 using EasySave.Model.Backup;
 using EasySave.Model.Observers;
 
@@ -10,10 +7,12 @@ namespace EasySave.ViewModel
     {
         private readonly BackupJobManager _jobManager;
 
+        private readonly Action _onGoBack;
+        private List<BackupJob> _lastJobs = new();
+
         public ObservableCollection<RunningJobViewModel> RunningJobs { get; }
             = new ObservableCollection<RunningJobViewModel>();
 
-        //  Global progress
         private int _globalTotalFiles;
         public int GlobalTotalFiles
         {
@@ -30,64 +29,74 @@ namespace EasySave.ViewModel
 
         public int GlobalTotalFilesDisplay => GlobalTotalFiles > 0 ? GlobalTotalFiles : 1;
 
-        public ICommand StartSingleJobCommand { get; }
-        public ICommand StartMultipleJobsCommand { get; }
+        public ICommand GoBackCommand { get; }
+        public ICommand RelaunchCommand { get; }
 
-        public BackupExecutionViewModel(BackupJobManager jobManager)
+        public BackupExecutionViewModel(BackupJobManager jobManager, Action onGoBack)
         {
             _jobManager = jobManager;
+            _onGoBack = onGoBack;
 
-            StartSingleJobCommand = new RelayCommand(jobName =>
-            {
-                if (jobName is string name && !string.IsNullOrWhiteSpace(name))
-                    StartSingleJob(name);
-            });
+            GoBackCommand = new RelayCommand(_ => _onGoBack());
 
-            StartMultipleJobsCommand = new RelayCommand(jobs =>
-            {
-                if (jobs is IEnumerable<BackupJob> list)
-                    StartMultipleJobs(list);
-            });
+            RelaunchCommand = new RelayCommand(
+                _ =>
+                {
+                    Reset();
+                    if (_lastJobs.Count == 1)
+                        StartSingleJob(_lastJobs[0].Name);
+                    else
+                        StartMultipleJobs(_lastJobs);
+                },
+                _ => _lastJobs.Count > 0
+            );
         }
 
-        //  Start jobs
+        public void Reset()
+        {
+            RunningJobs.Clear();
+            GlobalTotalFiles = 0;
+            GlobalProcessedFiles = 0;
+            OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
+        }
+
         public void StartSingleJob(string jobName)
         {
+            var job = _jobManager.Jobs.FirstOrDefault(j => j.Name == jobName);
+            if (job == null) return;
+
+            _lastJobs = new List<BackupJob> { job };
+
             var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
             RunningJobs.Add(vm);
-
             _jobManager.RegisterObserver(vm);
             _ = _jobManager.ExecuteJob(jobName);
         }
 
         public void StartMultipleJobs(IEnumerable<BackupJob> jobs)
         {
-            foreach (var job in jobs)
+            _lastJobs = jobs.ToList();
+
+            foreach (var job in _lastJobs)
             {
                 var vm = new RunningJobViewModel(job.Name, RefreshRunningJobs);
                 RunningJobs.Add(vm);
-
                 _jobManager.RegisterObserver(vm);
                 _ = _jobManager.ExecuteJob(job.Name);
             }
         }
 
-
-        //  Refresh global progress
         public void RefreshRunningJobs()
         {
             GlobalTotalFiles = RunningJobs.Sum(j => j.TotalFiles);
             GlobalProcessedFiles = RunningJobs.Sum(j => j.ProcessedFiles);
-
             OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
         }
     }
 
-    //  Per-job View-model
     public class RunningJobViewModel : ViewModelBase, IBackupObserver
     {
         public string JobName { get; }
-
         private readonly Action _onUpdated;
 
         private string _state = "Inactive";
@@ -154,7 +163,6 @@ namespace EasySave.ViewModel
             }
         }
 
-        // Called by StatusTracker
         public void OnJobUpdated(StatusSnapshot snapshot)
         {
             Application.Current.Dispatcher.Invoke(() =>

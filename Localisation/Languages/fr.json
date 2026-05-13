@@ -32,6 +32,8 @@
   "exec_total_files": "Total fichiers :",
   "exec_processed_files": "Fichiers traités :",
   "exec_processed_size": "Taille traitée :",
+  "exec_btn_back": "← Retour aux jobs",
+  "exec_btn_relaunch": "↺ Relancer",
 
   "ExecSectionProgressGlobal": "Progression globale",
   "ExecGlobalFiles": "Fichiers",
