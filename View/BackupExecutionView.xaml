@@ -6,29 +6,32 @@
         <StackPanel Margin="24" MaxWidth="600" HorizontalAlignment="Left">
 
             <TextBlock Text="{Binding DataContext.Loc[exec_title], RelativeSource={RelativeSource AncestorType=Window}}"
-                       FontSize="18" FontWeight="Bold" Margin="0,0,0,24"/>
+                       FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/>
 
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
+                <Button Content="{Binding DataContext.Loc[exec_btn_back], RelativeSource={RelativeSource AncestorType=Window}}"
+                        Command="{Binding GoBackCommand}"
+                        Padding="12,6" Margin="0,0,8,0"/>
+                <Button Content="{Binding DataContext.Loc[exec_btn_relaunch], RelativeSource={RelativeSource AncestorType=Window}}"
+                        Command="{Binding RelaunchCommand}"
+                        Padding="12,6"/>
+            </StackPanel>
 
-            <!--   GLOBAL PROGRESS SECTION -->
+            <!-- GLOBAL PROGRESS SECTION -->
             <TextBlock Text="{Binding DataContext.Loc[ExecSectionProgressGlobal], RelativeSource={RelativeSource AncestorType=Window}}"
                        FontSize="13" FontWeight="SemiBold" Foreground="#555" Margin="0,0,0,8"/>
 
             <Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="6"
                     Padding="16" Margin="0,0,0,24">
-
                 <StackPanel>
-
-                    <!-- Files X / Y -->
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="140"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-
                         <TextBlock Grid.Column="0"
                                    Text="{Binding DataContext.Loc[ExecGlobalFiles], RelativeSource={RelativeSource AncestorType=Window}}"
                                    Foreground="#888"/>
-
                         <TextBlock Grid.Column="1" FontWeight="SemiBold">
                             <TextBlock.Text>
                                 <MultiBinding StringFormat="{}{0} / {1}">
@@ -38,8 +41,6 @@
                             </TextBlock.Text>
                         </TextBlock>
                     </Grid>
-
-                    <!-- Global progress bar -->
                     <ProgressBar Height="14"
                                  Minimum="0"
                                  Maximum="{Binding GlobalTotalFilesDisplay, Mode=OneWay}"
@@ -48,100 +49,64 @@
                 </StackPanel>
             </Border>
 
-
-            <!--   RUNNING JOBS SECTION    -->
+            <!-- RUNNING JOBS SECTION -->
             <TextBlock Text="{Binding DataContext.Loc[ExecSectionRunningJobs], RelativeSource={RelativeSource AncestorType=Window}}"
                        FontSize="13" FontWeight="SemiBold" Foreground="#555" Margin="0,0,0,8"/>
 
             <ItemsControl ItemsSource="{Binding RunningJobs}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-
-                        <!-- Accordion -->
                         <Expander Margin="0,0,0,12">
-
-                            <!-- HEADER -->
                             <Expander.Header>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding JobName}"
-                                               FontWeight="SemiBold"
-                                               Margin="0,0,12,0"/>
-                                    <TextBlock Text="{Binding State}"
-                                               Foreground="#666"/>
+                                    <TextBlock Text="{Binding JobName}" FontWeight="SemiBold" Margin="0,0,12,0"/>
+                                    <TextBlock Text="{Binding State}" Foreground="#666"/>
                                 </StackPanel>
                             </Expander.Header>
-
-
-                            <!-- DETAILS -->
                             <Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="6"
                                     Padding="16" Margin="0,8,0,0">
-
                                 <StackPanel>
-
-                                    <!-- Total files -->
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-
                                         <TextBlock Grid.Column="0"
                                                    Text="{Binding DataContext.Loc[TotalFiles], RelativeSource={RelativeSource AncestorType=Window}}"
                                                    Foreground="#888"/>
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding TotalFiles}"
-                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalFiles}" FontWeight="SemiBold"/>
                                     </Grid>
-
-                                    <!-- Processed files -->
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-
                                         <TextBlock Grid.Column="0"
                                                    Text="{Binding DataContext.Loc[ProcessedFiles], RelativeSource={RelativeSource AncestorType=Window}}"
                                                    Foreground="#888"/>
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding ProcessedFiles}"
-                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding ProcessedFiles}" FontWeight="SemiBold"/>
                                     </Grid>
-
-                                    <!-- Percentage -->
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-
                                         <TextBlock Grid.Column="0"
                                                    Text="{Binding DataContext.Loc[ExecPercentage], RelativeSource={RelativeSource AncestorType=Window}}"
                                                    Foreground="#888"/>
-
-                                        <!-- Percentage property -->
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Percentage, StringFormat={}{0}%}"
                                                    FontWeight="SemiBold"/>
                                     </Grid>
-
-                                    <!-- Current file -->
                                     <TextBlock Text="{Binding DataContext.Loc[ExecCurrentFile], RelativeSource={RelativeSource AncestorType=Window}}"
                                                Foreground="#888" Margin="0,8,0,4"/>
-
                                     <TextBlock Text="{Binding CurrentSourceFile}"
-                                               FontSize="11" Foreground="#666"
-                                               TextTrimming="CharacterEllipsis"/>
-
+                                               FontSize="11" Foreground="#666" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding CurrentDestinationFile}"
-                                               FontSize="11" Foreground="#666"
-                                               TextTrimming="CharacterEllipsis"/>
-
+                                               FontSize="11" Foreground="#666" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                             </Border>
-
                         </Expander>
-
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
