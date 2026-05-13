@@ -23,6 +23,9 @@ public class BackupJobManager
     private readonly Dictionary<string, Task> _runningJobs = new();
     private readonly HashSet<string> _waitingJobs = new();
 
+    private readonly SemaphoreSlim _largeFileSemaphore = new(1, 1);
+    public int LargeFileThresholdKb => _config.LargeFileThresholdKb;
+
     public int? MaxJobs { get; set; } = null;
     public bool CanAddJob => MaxJobs == null || Jobs.Count < MaxJobs;
 
@@ -95,7 +98,9 @@ public class BackupJobManager
                 strategy,
                 storage,
                 logger,
-                _config
+                _config,
+                _largeFileSemaphore,
+                LargeFileThresholdKb
             );
 
             // Attach all observers (UI observers)
@@ -106,10 +111,7 @@ public class BackupJobManager
             jobInstance.AttachObserver(statusTracker);
 
             //  Run job in background
-            var task = Task.Run(() =>
-            {
-                jobInstance.Execute();
-            });
+            var task = Task.Run(() => jobInstance.ExecuteAsync());
 
             lock (_runningJobs)
             {
@@ -158,7 +160,9 @@ public class BackupJobManager
                 strategy,
                 _sharedStorage,
                 _sharedLogger,
-                _config
+                _config,
+                _largeFileSemaphore,
+                LargeFileThresholdKb
             );
 
             // Attach all observers
@@ -200,7 +204,16 @@ public class BackupJobManager
 
         var strategy = CreateStrategy(strategyType);
 
-        var job = new BackupJob(name, source, target, strategy, _sharedStorage, _sharedLogger, _config);
+        var job = new BackupJob(
+            name, 
+            source, 
+            target, 
+            strategy, 
+            _sharedStorage, 
+            _sharedLogger, 
+            _config,
+            _largeFileSemaphore,
+            LargeFileThresholdKb);
 
         // Attach all observers
         foreach (var obs in _observers)

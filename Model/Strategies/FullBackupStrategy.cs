@@ -2,17 +2,17 @@
 using EasySave.Model.Encryption;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
+using System.Diagnostics;
 
 namespace EasySave.Model.Strategies
 {
     /// <summary>
-    /// Implements a full backup strategy.
-    /// Copies all files from the source directory to the target directory,
-    /// logs each action, and notifies observers of real-time progress.
+    /// Full backup strategy with concurrency control:
+    /// Only one large file (> threshold KB) may be processed at a time.
     /// </summary>
     public class FullBackupStrategy : IBackupStrategy
     {
-        public void Execute(BackupJobContext context)
+        public async Task ExecuteAsync(BackupJobContext context)
         {
             var storage = context.Storage;
             var logger = context.Logger;
@@ -40,51 +40,72 @@ namespace EasySave.Model.Strategies
                 Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
 
                 var fileInfo = storage.GetFileInfo(sourceFile);
+                bool isLarge = fileInfo.Size > context.LargeFileThresholdKb * 1024;
 
-                var stopwatch = Stopwatch.StartNew();
-                bool success = storage.CopyFile(sourceFile, destinationFile);
-                stopwatch.Stop();
-
-                long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
-
-                // Encrypt backup if needed
-                int encryptionTime = 0;
-                if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                // Debug.WriteLine($"File size: {fileInfo.Size} bytes, threshold: {context.LargeFileThresholdKb * 1024}");
+                // Limit large file concurrency
+                if (isLarge)
                 {
-                    encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
+                    // Debug.WriteLine($"[WAIT] Large file detected ({sourceFile}). Waiting for semaphore...");
+                    await context.LargeFileSemaphore.WaitAsync();
+                    // Debug.WriteLine($"[ENTER] Semaphore acquired for large file: {sourceFile}");
                 }
-
-                // Log the action
-                logger.LogEntry(new LogEntry
+                try
                 {
-                    Timestamp = DateTime.Now,
-                    JobName = context.JobName,
-                    SourcePath = sourceFile,
-                    DestinationPath = destinationFile,
-                    FileSize = fileInfo.Size,
-                    TransferTimeMs = transferTime,
-                    EncryptionTimeMs = encryptionTime
-                });
+                    var stopwatch = Stopwatch.StartNew();
+                    bool success = storage.CopyFile(sourceFile, destinationFile);
+                    stopwatch.Stop();
 
-                // Update progress
-                processedFiles++;
-                processedSize += fileInfo.Size;
+                    long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
 
-                // Notify observers
-                var snapshot = new StatusSnapshot(
-                    context.JobName,
-                    DateTime.Now,
-                    "Active",
-                    totalFiles,
-                    totalSize,
-                    processedFiles,
-                    processedSize,
-                    sourceFile,
-                    destinationFile
-                );
+                    // Encrypt backup if needed
+                    int encryptionTime = 0;
+                    if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                    {
+                        encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
+                    }
 
-                foreach (var obs in observers)
-                    obs.OnJobUpdated(snapshot);
+                    // Log the action
+                    logger.LogEntry(new LogEntry
+                    {
+                        Timestamp = DateTime.Now,
+                        JobName = context.JobName,
+                        SourcePath = sourceFile,
+                        DestinationPath = destinationFile,
+                        FileSize = fileInfo.Size,
+                        TransferTimeMs = transferTime,
+                        EncryptionTimeMs = encryptionTime
+                    });
+
+                    // Update progress
+                    processedFiles++;
+                    processedSize += fileInfo.Size;
+
+                    // Notify observers
+                    var snapshot = new StatusSnapshot(
+                        context.JobName,
+                        DateTime.Now,
+                        "Active",
+                        totalFiles,
+                        totalSize,
+                        processedFiles,
+                        processedSize,
+                        sourceFile,
+                        destinationFile
+                    );
+
+                    foreach (var obs in observers)
+                        obs.OnJobUpdated(snapshot);
+                }
+                finally
+                {
+                    // Release semaphore only for large files
+                    if (isLarge)
+                    {
+                        // Debug.WriteLine($"[EXIT] Semaphore released for large file: {sourceFile}");
+                        context.LargeFileSemaphore.Release();
+                    }
+                }
             }
 
             // Final inactive status

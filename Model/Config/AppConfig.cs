@@ -9,6 +9,7 @@ namespace EasySave.Model.Config
         public string Language { get; set; } = "en";
         public string LogDirectory { get; set; } = "Logs";
         public string LogFormat { get; set; } = "json"; // "json" or "xml"
+        public int LargeFileThresholdKb { get; set; } = 800;
         public string StatusFilePath { get; set; } = "status.json";
         public string DefaultBackupLocation { get; set; } = "Backups";
         public string CryptoSoftPath { get; set; } = "CryptoSoft.exe";

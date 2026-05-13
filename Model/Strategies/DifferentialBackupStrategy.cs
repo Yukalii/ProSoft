@@ -3,17 +3,17 @@ using EasySave.Model.Encryption;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
+using System.Diagnostics;
 
 namespace EasySave.Model.Strategies
 {
     /// <summary>
-    /// Implements a differential backup strategy.
-    /// Copies only files that are new or modified compared to the target.
-    /// Logs each action and notifies observers of real-time progress.
+    /// Differential backup strategy with concurrency control:
+    /// Only one large file (> threshold KB) may be processed at a time.
     /// </summary>
     public class DifferentialBackupStrategy : IBackupStrategy
     {
-        public void Execute(BackupJobContext context)
+        public async Task ExecuteAsync(BackupJobContext context)
         {
             var storage = context.Storage;
             var logger = context.Logger;
@@ -46,32 +46,46 @@ namespace EasySave.Model.Strategies
                     sourceInfo.LastModified > targetInfo.LastModified ||
                     sourceInfo.Size != targetInfo.Size;
 
+                bool isLarge = sourceInfo.Size > context.LargeFileThresholdKb * 1024;
+
                 if (mustCopy)
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
+                    // Limit concurrency for large files
+                    if (isLarge)
+                        await context.LargeFileSemaphore.WaitAsync();
 
-                    var stopwatch = Stopwatch.StartNew();
-                    bool success = storage.CopyFile(sourceFile, destinationFile);
-                    stopwatch.Stop();
-
-                    long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
-
-                    int encryptionTime = 0;
-                    if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                    try
                     {
-                        encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
+                        Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
+
+                        var stopwatch = Stopwatch.StartNew();
+                        bool success = storage.CopyFile(sourceFile, destinationFile);
+                        stopwatch.Stop();
+
+                        long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
+
+                        int encryptionTime = 0;
+                        if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                        {
+                            encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
+                        }
+
+                        logger.LogEntry(new LogEntry
+                        {
+                            Timestamp = DateTime.Now,
+                            JobName = context.JobName,
+                            SourcePath = sourceFile,
+                            DestinationPath = destinationFile,
+                            FileSize = sourceInfo.Size,
+                            TransferTimeMs = transferTime,
+                            EncryptionTimeMs = encryptionTime
+                        });
                     }
-
-                    logger.LogEntry(new LogEntry
+                    finally
                     {
-                        Timestamp = DateTime.Now,
-                        JobName = context.JobName,
-                        SourcePath = sourceFile,
-                        DestinationPath = destinationFile,
-                        FileSize = sourceInfo.Size,
-                        TransferTimeMs = transferTime,
-                        EncryptionTimeMs = encryptionTime
-                    });
+                        if (isLarge)
+                            context.LargeFileSemaphore.Release();
+                    }
                 }
 
                 processedFiles++;
