@@ -148,3 +148,21 @@ Ensures a single, consistent configuration source across the application lifetim
 
 The following features are **not yet implemented** in the current version:
 
+***
+
+## Structure
+
+- Main branch or the Production branch: `main`
+This branch is used for the production version of the software. 
+It should always contain stable and tested code that is ready for release. 
+
+- PreProduction branch: `PreProduction`
+This branch is used for testing and validation before merging into the main branch. 
+All the code that is ready, tested, and validated in the DEV branch can centralize into the PreProduction branch to have a reliable base AND continue adding **Hotfix** only.
+
+- Development branch: `DEV`
+This branch is used for active development. The development team works on new features, bug fixes, and improvements in this branch. Everyone starts from this branch to create their own branches for specific features or bug fixes.
+All will be centralized to test if the core functionalities are still working before merging into the PreProduction branch.
+
+And by the `DEV` branch, we all work in separate branches, called `Feature-` or `Fix-`. And after that we merge all into the `DEV` branch, to have all centralized code and features. When we have a stable version, we merge the `DEV` to the `PreProduction` branch. We have the same idea for the `Main`/`Production` where we will do the **release** for the deliverable.
+We implemented a **GitHub Action** to be sure that when we merge on a branch, an automatic Action will run and build the project to prevent crash or another thing.
