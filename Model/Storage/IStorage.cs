@@ -1,3 +1,5 @@
+using EasySave.Model.Backup;
+
 namespace EasySave.Model.Storage
 {
     /// <summary>
@@ -12,9 +14,14 @@ namespace EasySave.Model.Storage
         IEnumerable<string> EnumerateFiles(string directoryPath);
 
         /// <summary>
-        /// Copy a file from source to destination
+        /// Copy a file from source to destination (no cancel)
         /// </summary>
         bool CopyFile(string sourcePath, string destinationPath);
+
+        /// <summary>
+        /// Respects the control token for immediate stop during a file transfer.
+        /// </summary>
+        bool CopyFile(string sourcePath, string destinationPath, JobControlToken? controlToken);
 
         /// <summary>
         /// Return metadata about a file (size, existence, last modified).

@@ -1,4 +1,5 @@
-﻿using EasySave.Model.Config;
+﻿using EasySave.Model.BusinessSoftware;
+using EasySave.Model.Config;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
@@ -48,6 +49,7 @@ namespace EasySave.Model.Backup
         /// Config object providing access to encryption settings.
         /// </summary>
         public AppConfig Config { get; }
+        public JobControlToken? ControlToken { get; }
 
         /// <summary>
         /// Semaphore managing the number of large file treated at any time.
@@ -59,6 +61,8 @@ namespace EasySave.Model.Backup
         /// </summary>
         public int LargeFileThresholdKb { get; }
 
+        public IBusinessSoftwareManager? BusinessSoftware { get; }
+
         public BackupJobContext(
             string jobName,
             string sourcePath,
@@ -68,7 +72,9 @@ namespace EasySave.Model.Backup
             IReadOnlyList<IBackupObserver> observers,
             AppConfig config,
             SemaphoreSlim largeFileSemaphore,
-            int largeFileThresholdKb)
+            int largeFileThresholdKb,
+            JobControlToken? controlToken = null,
+            IBusinessSoftwareManager? businessSoftware = null)
         {
             JobName = jobName;
             SourcePath = sourcePath;
@@ -77,8 +83,10 @@ namespace EasySave.Model.Backup
             Logger = logger;
             Observers = observers;
             Config = config;
+            ControlToken = controlToken;
             LargeFileSemaphore = largeFileSemaphore;
             LargeFileThresholdKb = largeFileThresholdKb;
+            BusinessSoftware = businessSoftware;
         }
     }
 }

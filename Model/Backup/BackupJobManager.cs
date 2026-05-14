@@ -17,11 +17,13 @@ public class BackupJobManager
     private readonly ILogger _sharedLogger;
 
     // Supports multiple observers (UI + StatusTracker)
-    private readonly List<IBackupObserver> _observers = new();
+    private readonly List<IBackupObserver> _globalObservers = new();
+    private readonly Dictionary<string, List<IBackupObserver>> _jobObservers = new();
 
     // Tracks running jobs
     private readonly Dictionary<string, Task> _runningJobs = new();
     private readonly HashSet<string> _waitingJobs = new();
+    private readonly Dictionary<string, JobControlToken> _controlTokens = new();
 
     private readonly SemaphoreSlim _largeFileSemaphore = new(1, 1);
     public int LargeFileThresholdKb => _config.LargeFileThresholdKb;
@@ -30,6 +32,8 @@ public class BackupJobManager
     public bool CanAddJob => MaxJobs == null || Jobs.Count < MaxJobs;
 
     public List<BackupJob> Jobs { get; private set; } = new();
+
+    public IReadOnlyDictionary<string, Task> RunningJobs => _runningJobs;
 
     public BackupJobManager(
         string jobsFilePath,
@@ -46,8 +50,7 @@ public class BackupJobManager
         _businessSoftware = businessSoftware;
 
         // Add initial observer
-        _observers.Add(statusObserver);
-
+        _globalObservers.Add(statusObserver);
         LoadJobs();
     }
 
@@ -55,7 +58,37 @@ public class BackupJobManager
     public bool IsJobRunning(string name)
         => _runningJobs.ContainsKey(name);
 
-    public IReadOnlyDictionary<string, Task> RunningJobs => _runningJobs;
+    public bool IsJobPaused(string name)
+    {
+        lock (_controlTokens)
+        {
+            return _controlTokens.TryGetValue(name, out var token) && token.IsPaused;
+        }
+    }
+
+    // Register a global Observer
+    public void RegisterJobObserver(string jobName, IBackupObserver observer)
+    {
+        lock (_jobObservers)
+        {
+            if (!_jobObservers.TryGetValue(jobName, out var list))
+            {
+                list = new List<IBackupObserver>();
+                _jobObservers[jobName] = list;
+            }
+            if (!list.Contains(observer))
+                list.Add(observer);
+        }
+    }
+
+    public void RegisterGlobalObserver(IBackupObserver observer)
+    {
+        lock (_globalObservers)
+        {
+            if (!_globalObservers.Contains(observer))
+                _globalObservers.Add(observer);
+        }
+    }
 
     public async Task ExecuteJob(string name)
     {
@@ -67,138 +100,164 @@ public class BackupJobManager
             _waitingJobs.Add(name);
         }
 
-        try
+        var controlToken = new JobControlToken();
+
+        lock (_controlTokens)
         {
-            // Wait for business software to close
-            while (_businessSoftware.SoftwareIsRunning())
-                await Task.Delay(2000);
+            _controlTokens[name] = controlToken;
+        }
 
-            var job = Jobs.Find(j => j.Name == name);
-            if (job == null)
-                return;
-
-            var storage = new LocalStorage();
-            var logger = new JsonLogger(_config.LogDirectory);
-
-            // Create a unique status file for this job
-            string statusFile = Path.Combine(
-                _config.StatusFilePath,
-                $"{name}_status.json"
-            );
-
-            var statusTracker = new StatusTracker(statusFile);
-
-            var strategy = CreateStrategy(job.Strategy.GetType().Name);
-
-            // Create a fresh job instance for this execution
-            var jobInstance = new BackupJob(
-                job.Name,
-                job.SourcePath,
-                job.TargetPath,
-                strategy,
-                storage,
-                logger,
-                _config,
-                _largeFileSemaphore,
-                LargeFileThresholdKb
-            );
-
-            // Attach all observers (UI observers)
-            foreach (var obs in _observers)
-                jobInstance.AttachObserver(obs);
-
-            // Attach per-job StatusTracker
-            jobInstance.AttachObserver(statusTracker);
-
-            //  Run job in background
-            var task = Task.Run(() => jobInstance.ExecuteAsync());
-
-            lock (_runningJobs)
+        _ = Task.Run(async () =>
+        {
+            try
             {
-                _runningJobs[name] = task;
+                // Wait for business software to close
+                while (_businessSoftware.SoftwareIsRunning())
+                {
+                    controlToken.Token.ThrowIfCancellationRequested();
+                    await Task.Delay(2000, controlToken.Token);
+                }
+
+                var job = Jobs.Find(j => j.Name == name);
+                if (job == null)
+                    return;
+
+                var storage = new LocalStorage();
+                var logger = new JsonLogger(_config.LogDirectory);
+
+                // Create a unique status file for this job
+                string statusFile = Path.Combine(
+                    _config.StatusFilePath,
+                    $"{name}_status.json"
+                );
+
+                var statusTracker = new StatusTracker(statusFile);
+
+                var strategy = CreateStrategy(job.Strategy.GetType().Name);
+
+                // Create a fresh job instance for this execution
+                var jobInstance = new BackupJob(
+                    job.Name,
+                    job.SourcePath,
+                    job.TargetPath,
+                    strategy,
+                    storage,
+                    logger,
+                    _config,
+                    _largeFileSemaphore,
+                    LargeFileThresholdKb,
+                    _businessSoftware
+                );
+
+                // Attach all observers (UI observers)
+                lock (_globalObservers)
+                    foreach (var obs in _globalObservers)
+                        jobInstance.AttachObserver(obs);
+
+                lock (_jobObservers)
+                    if (_jobObservers.TryGetValue(name, out var dedicated))
+                        foreach (var obs in dedicated)
+                            jobInstance.AttachObserver(obs);
+
+                jobInstance.AttachObserver(statusTracker);
+
+                //  Run job in background
+                var task = jobInstance.ExecuteAsync(controlToken);
+
+                lock (_runningJobs)
+                {
+                    _runningJobs[name] = task;
+                }
+
+                await task;
             }
-
-            await task;
-
-            lock (_runningJobs)
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { Debug.WriteLine($"Error in {name}: {ex.Message}"); }
+            finally
             {
-                _runningJobs.Remove(name);
+                lock (_waitingJobs)
+                {
+                    _waitingJobs.Remove(name);
+                }
+                lock (_jobObservers)
+                {
+                    _jobObservers.Remove(name);
+                }
+                lock (_controlTokens)
+                {
+                    if (_controlTokens.TryGetValue(name, out var token))
+                    {
+                        token.Dispose();
+                        _controlTokens.Remove(name);
+                    }
+                }
             }
-        }
-        finally
-        {
-            lock (_waitingJobs)
-            {
-                _waitingJobs.Remove(name);
-            }
-        }
-    }
-
-    //  Load / save jobs
-    private void LoadJobs()
-    {
-        if (!File.Exists(_jobsFilePath))
-        {
-            Jobs = new List<BackupJob>();
-            return;
-        }
-
-        string json = File.ReadAllText(_jobsFilePath);
-        var jobDtos = JsonSerializer.Deserialize<List<BackupJobDTO>>(json)
-                      ?? new List<BackupJobDTO>();
-
-        Jobs = new List<BackupJob>();
-
-        foreach (var dto in jobDtos)
-        {
-            var strategy = CreateStrategy(dto.StrategyType);
-
-            var job = new BackupJob(
-                dto.Name,
-                dto.SourcePath,
-                dto.TargetPath,
-                strategy,
-                _sharedStorage,
-                _sharedLogger,
-                _config,
-                _largeFileSemaphore,
-                LargeFileThresholdKb
-            );
-
-            // Attach all observers
-            foreach (var obs in _observers)
-                job.AttachObserver(obs);
-
-            Jobs.Add(job);
-        }
-    }
-
-    private void SaveJobs()
-    {
-        var jobDtos = Jobs.Select(job => new BackupJobDTO
-        {
-            Name = job.Name,
-            SourcePath = job.SourcePath,
-            TargetPath = job.TargetPath,
-            StrategyType = job.Strategy.GetType().Name
-        }).ToList();
-
-        string json = JsonSerializer.Serialize(jobDtos, new JsonSerializerOptions
-        {
-            WriteIndented = true
         });
-
-        File.WriteAllText(_jobsFilePath, json);
+        await Task.CompletedTask;
     }
 
-    //  Job management
+
+    //Individual job control
+    public void PlayJob(string name)
+    {
+        lock (_controlTokens)
+        {
+            if (_controlTokens.TryGetValue(name, out var token))
+                token.Play();
+        }
+    }
+
+    public void PauseJob(string name)
+    {
+        lock (_controlTokens)
+        {
+            if (_controlTokens.TryGetValue(name, out var token))
+                token.Pause();
+        }
+    }
+
+    public void StopJob(string name)
+    {
+        lock (_controlTokens)
+        {
+            if (_controlTokens.TryGetValue(name, out var token))
+                token.Stop();
+        }
+    }
+
+    // All jobs control
+    public void PlayAll()
+    {
+        lock (_controlTokens)
+        {
+            foreach (var token in _controlTokens.Values)
+                token.Play();
+        }
+    }
+
+    public void PauseAll()
+    {
+        lock (_controlTokens)
+        {
+            foreach (var token in _controlTokens.Values)
+                token.Pause();
+        }
+    }
+
+    public void StopAll()
+    {
+        lock (_controlTokens)
+        {
+            foreach (var token in _controlTokens.Values)
+                token.Stop();
+        }
+    }
+
+    // Job Management
     public void AddJob(string name, string source, string target, string strategyType)
     {
         if (!CanAddJob)
-            throw new InvalidOperationException(
-                $"Cannot add job: maximum of {MaxJobs} jobs reached."
-            );
-
+            throw new InvalidOperationException($"Maximum of {MaxJobs} jobs reached.");
         if (Jobs.Any(j => j.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException("JobAlreadyExists");
 
@@ -213,10 +272,11 @@ public class BackupJobManager
             _sharedLogger, 
             _config,
             _largeFileSemaphore,
-            LargeFileThresholdKb);
+            LargeFileThresholdKb,
+            _businessSoftware);
 
         // Attach all observers
-        foreach (var obs in _observers)
+        foreach (var obs in _globalObservers)
             job.AttachObserver(obs);
 
         Jobs.Add(job);
@@ -229,6 +289,40 @@ public class BackupJobManager
         SaveJobs();
     }
 
+    //  Load / save jobs
+    private void LoadJobs()
+    {
+        if (!File.Exists(_jobsFilePath))
+        {
+            Jobs = new();
+            return;
+        }
+
+        var jobDtos = JsonSerializer.Deserialize<List<BackupJobDTO>>(
+                       File.ReadAllText(_jobsFilePath))
+                   ?? new List<BackupJobDTO>();
+
+        Jobs = jobDtos.Select(dto => new BackupJob(
+            dto.Name, dto.SourcePath, dto.TargetPath,
+            CreateStrategy(dto.StrategyType),
+            _sharedStorage, _sharedLogger, _config, _largeFileSemaphore, LargeFileThresholdKb, _businessSoftware)).ToList();
+    }
+
+    private void SaveJobs()
+    {
+        var jobDtos = Jobs.Select(job => new BackupJobDTO
+        {
+            Name = job.Name,
+            SourcePath = job.SourcePath,
+            TargetPath = job.TargetPath,
+            StrategyType = job.Strategy.GetType().Name
+        }).ToList();
+
+        File.WriteAllText(_jobsFilePath,
+            JsonSerializer.Serialize(jobDtos, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+
     private IBackupStrategy CreateStrategy(string type)
     {
         return type switch
@@ -239,17 +333,6 @@ public class BackupJobManager
         };
     }
 
-    public void RegisterObserver(IBackupObserver observer)
-    {
-        _observers.Add(observer);
-
-        foreach (var job in Jobs)
-            job.AttachObserver(observer);
-    }
-
-    /// <summary>
-    /// DTO used for saving/loading jobs.
-    /// </summary>
     public class BackupJobDTO
     {
         public string Name { get; set; }
