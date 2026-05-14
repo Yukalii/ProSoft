@@ -96,21 +96,5 @@ namespace EasySave.Model.Backup
                 _largeFileThresholdKb,
                 controlToken);
         }
-        private async Task ExecutreAsync()
-        {
-            var context = new BackupJobContext(
-                Name,
-                SourcePath,
-                TargetPath,
-                _storage,
-                _logger,
-                _observers,
-                _config,
-                _largeFileSemaphore,
-                _largeFileThresholdKb
-                );
-
-            await Strategy.ExecuteAsync(context);
-        }
     }
 }

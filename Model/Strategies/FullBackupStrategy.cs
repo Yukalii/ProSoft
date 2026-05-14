@@ -2,8 +2,6 @@
 using EasySave.Model.Encryption;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
-using System.Diagnostics;
-using System.Linq;
 
 namespace EasySave.Model.Strategies
 {
@@ -33,15 +31,14 @@ namespace EasySave.Model.Strategies
                     Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
 
                     var fileInfo = context.Storage.GetFileInfo(sourceFile);
-                    // Conversion KB en Bytes pour la comparaison
                     bool isLarge = fileInfo.Size > (context.LargeFileThresholdKb * 1024);
 
-                    Debug.WriteLine($"{fileInfo.Size}");
+                    // Debug.WriteLine($"File size: {fileInfo.Size} bytes, threshold: {context.LargeFileThresholdKb * 1024}");      // Defense test
                     if (isLarge)
                     {
-                        Debug.WriteLine("Wait");
+                        // Debug.WriteLine($"[WAIT] Large file detected ({sourceFile}). Waiting for semaphore...");      // Defense test
                         await context.LargeFileSemaphore.WaitAsync(context.ControlToken?.Token ?? CancellationToken.None);
-                        Debug.WriteLine("Enter");
+                        // Debug.WriteLine($"[ENTER] Semaphore acquired for large file: {sourceFile}");      // Defense test
                     }
 
                     try
@@ -58,7 +55,6 @@ namespace EasySave.Model.Strategies
                         processedFiles++;
                         processedSize += fileInfo.Size;
 
-                        // UN SEUL APPEL de notification
                         Notify(context.Observers, new StatusSnapshot(
                             context.JobName, DateTime.Now, "Active",
                             totalFiles, totalSize, processedFiles, processedSize,
@@ -69,16 +65,22 @@ namespace EasySave.Model.Strategies
                         if (isLarge)
                         {
                             context.LargeFileSemaphore.Release();
-                            Debug.WriteLine("Exit");
+                            // Debug.WriteLine($"[EXIT] Semaphore released for large file: {sourceFile}");      // Defense test
                         }
                     }
                 }
 
-                Notify(context.Observers, new StatusSnapshot(context.JobName, DateTime.Now, "Inactive", totalFiles, totalSize, processedFiles, processedSize, null, null));
+                Notify(context.Observers, new StatusSnapshot(
+                    context.JobName, DateTime.Now, "Inactive", 
+                    totalFiles, totalSize, processedFiles, processedSize, 
+                    null, null));
             }
             catch (OperationCanceledException)
             {
-                Notify(context.Observers, new StatusSnapshot(context.JobName, DateTime.Now, "Stopped", totalFiles, totalSize, processedFiles, processedSize, null, null));
+                Notify(context.Observers, new StatusSnapshot(
+                    context.JobName, DateTime.Now, "Stopped", 
+                    totalFiles, totalSize, processedFiles, processedSize, 
+                    null, null));
                 throw;
             }
         }
