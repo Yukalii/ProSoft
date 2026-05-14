@@ -23,7 +23,22 @@ namespace EasySave.Model.Strategies
             {
                 foreach (var sourceFile in allFiles)
                 {
+                    // BUsiness Softwaree Management
                     context.ControlToken?.WaitIfPaused();
+                    if (context.BusinessSoftware != null)
+                    {
+                        while (context.BusinessSoftware.SoftwareIsRunning())
+                        {
+                            context.ControlToken?.Token.ThrowIfCancellationRequested();
+
+                            Notify(context.Observers, new StatusSnapshot(
+                                context.JobName, DateTime.Now, "Waiting",
+                                totalFiles, totalSize, processedFiles, processedSize,
+                                sourceFile, "Waiting for business software to close..."));
+
+                            await Task.Delay(1000);
+                        }
+                    }
                     context.ControlToken?.Token.ThrowIfCancellationRequested();
 
                     string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);

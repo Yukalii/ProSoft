@@ -145,7 +145,8 @@ public class BackupJobManager
                     logger,
                     _config,
                     _largeFileSemaphore,
-                    LargeFileThresholdKb
+                    LargeFileThresholdKb,
+                    _businessSoftware
                 );
 
                 // Attach all observers (UI observers)
@@ -271,7 +272,8 @@ public class BackupJobManager
             _sharedLogger, 
             _config,
             _largeFileSemaphore,
-            LargeFileThresholdKb);
+            LargeFileThresholdKb,
+            _businessSoftware);
 
         // Attach all observers
         foreach (var obs in _globalObservers)
@@ -303,7 +305,7 @@ public class BackupJobManager
         Jobs = jobDtos.Select(dto => new BackupJob(
             dto.Name, dto.SourcePath, dto.TargetPath,
             CreateStrategy(dto.StrategyType),
-            _sharedStorage, _sharedLogger, _config, _largeFileSemaphore, LargeFileThresholdKb)).ToList();
+            _sharedStorage, _sharedLogger, _config, _largeFileSemaphore, LargeFileThresholdKb, _businessSoftware)).ToList();
     }
 
     private void SaveJobs()

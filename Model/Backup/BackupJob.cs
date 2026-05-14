@@ -1,4 +1,5 @@
-﻿using EasySave.Model.Config;
+﻿using EasySave.Model.BusinessSoftware;
+using EasySave.Model.Config;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
@@ -25,6 +26,7 @@ namespace EasySave.Model.Backup
         private readonly ILogger _logger;
         private readonly List<IBackupObserver> _observers;
         private readonly AppConfig _config;
+        private readonly IBusinessSoftwareManager _businessSoftware;
 
         public BackupJob(
             string name,
@@ -35,7 +37,9 @@ namespace EasySave.Model.Backup
             ILogger logger,
             AppConfig config,
             SemaphoreSlim largeFileSemaphore,
-            int largeFileThresholdKb)
+            int largeFileThresholdKb,
+            IBusinessSoftwareManager businessSoftware)
+            
         {
             Name = name;
             SourcePath = sourcePath;
@@ -47,6 +51,7 @@ namespace EasySave.Model.Backup
             _config = config; 
             _largeFileSemaphore = largeFileSemaphore;
             _largeFileThresholdKb = largeFileThresholdKb;
+            _businessSoftware = businessSoftware;
         }
 
         /// <summary>
@@ -94,7 +99,8 @@ namespace EasySave.Model.Backup
                 _config,
                 _largeFileSemaphore,
                 _largeFileThresholdKb,
-                controlToken);
+                controlToken,
+                _businessSoftware);
         }
     }
 }

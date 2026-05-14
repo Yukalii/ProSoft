@@ -54,6 +54,21 @@ namespace EasySave.Model.Strategies
 
                     if (mustCopy)
                     {
+                        // Business Software management
+                        if (context.BusinessSoftware != null)
+                        {
+                            while (context.BusinessSoftware.SoftwareIsRunning())
+                            {
+                                control?.Token.ThrowIfCancellationRequested();
+
+                                Notify(observers, new StatusSnapshot(
+                                    context.JobName, DateTime.Now, "Waiting",
+                                    totalFiles, totalSize, processedFiles, processedSize,
+                                    sourceFile, "Paused: Business Software detected"));
+
+                                await Task.Delay(1000);
+                            }
+                        }
                         // Limit concurrency for large files
                         if (isLarge)
                             await context.LargeFileSemaphore.WaitAsync();
