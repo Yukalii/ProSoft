@@ -17,7 +17,7 @@ public class BackupJobManager
     private readonly ILogger _sharedLogger;
 
     // Supports multiple observers (UI + StatusTracker)
-    private readonly List<IBackupObserver> _globalObservers = new();
+    private readonly List<IBackupObserver> _observers = new();
     private readonly Dictionary<string, List<IBackupObserver>> _jobObservers = new();
 
     // Tracks running jobs
@@ -68,7 +68,6 @@ public class BackupJobManager
         }
     }
 
-    // Register a global Observer
     public void RegisterJobObserver(string jobName, IBackupObserver observer)
     {
         lock (_jobObservers)
@@ -82,13 +81,13 @@ public class BackupJobManager
                 list.Add(observer);
         }
     }
-
-    public void RegisterGlobalObserver(IBackupObserver observer)
+    
+    public void RegisterObserver(IBackupObserver observer)
     {
-        lock (_globalObservers)
+        lock (_observers)
         {
-            if (!_globalObservers.Contains(observer))
-                _globalObservers.Add(observer);
+            if (!_observers.Contains(observer))
+                _observers.Add(observer);
         }
     }
 
@@ -276,7 +275,7 @@ public class BackupJobManager
             _businessSoftware);
 
         // Attach all observers
-        foreach (var obs in _globalObservers)
+        foreach (var obs in _observers)
             job.AttachObserver(obs);
 
         Jobs.Add(job);
