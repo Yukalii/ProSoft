@@ -1,6 +1,3 @@
-using System.Windows;
-using System.Collections.ObjectModel;
-using System.Windows.Input;
 using EasySave.Model.Backup;
 using EasySave.Model.Observers;
 
@@ -9,6 +6,9 @@ namespace EasySave.ViewModel
     public class BackupExecutionViewModel : ViewModelBase
     {
         private readonly BackupJobManager _jobManager;
+
+        private readonly Action _onGoBack;
+        private List<BackupJob> _lastJobs = new();
 
         public ObservableCollection<RunningJobViewModel> RunningJobs { get; }
             = new ObservableCollection<RunningJobViewModel>();
@@ -29,8 +29,8 @@ namespace EasySave.ViewModel
 
         public int GlobalTotalFilesDisplay => GlobalTotalFiles > 0 ? GlobalTotalFiles : 1;
 
-        public ICommand StartSingleJobCommand { get; }
-        public ICommand StartMultipleJobsCommand { get; }
+        public ICommand GoBackCommand { get; }
+        public ICommand RelaunchCommand { get; }
 
         public ICommand PauseSingleJobCommand { get; }
         public ICommand PlaySingleJobCommand { get; }
@@ -43,18 +43,36 @@ namespace EasySave.ViewModel
         public BackupExecutionViewModel(BackupJobManager jobManager)
         {
             _jobManager = jobManager;
+            _onGoBack = onGoBack;
 
-            StartSingleJobCommand = new RelayCommand(jobName =>
-            {
-                if (jobName is string name && !string.IsNullOrWhiteSpace(name))
-                    StartSingleJob(name);
-            });
+            GoBackCommand = new RelayCommand(_ => _onGoBack());
+
+            RelaunchCommand = new RelayCommand(
+                _ =>
+                {
+                    Reset();
+                    if (_lastJobs.Count == 1)
+                        StartSingleJob(_lastJobs[0].Name);
+                    else
+                        StartMultipleJobs(_lastJobs);
+                },
+                _ => _lastJobs.Count > 0
+            );
+        }
 
             StartMultipleJobsCommand = new RelayCommand(jobs =>
             {
                 if (jobs is IEnumerable<BackupJob> list)
                     StartMultipleJobs(list);
             });
+
+        public void Reset()
+        {
+            RunningJobs.Clear();
+            GlobalTotalFiles = 0;
+            GlobalProcessedFiles = 0;
+            OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
+        }
 
             PauseSingleJobCommand = new RelayCommand(jobName =>
             {
@@ -105,6 +123,52 @@ namespace EasySave.ViewModel
 
         public void StartSingleJob(string jobName)
         {
+            var job = _jobManager.Jobs.FirstOrDefault(j => j.Name == jobName);
+            if (job == null) return;
+
+            _lastJobs = new List<BackupJob> { job };
+
+            var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
+            RunningJobs.Add(vm);
+            _jobManager.RegisterObserver(vm);
+            _ = _jobManager.ExecuteJob(jobName);
+        }
+
+        public void StartMultipleJobs(IEnumerable<BackupJob> jobs)
+        {
+            _lastJobs = jobs.ToList();
+
+            foreach (var job in _lastJobs)
+            {
+                var vm = new RunningJobViewModel(job.Name, RefreshRunningJobs);
+                RunningJobs.Add(vm);
+                _jobManager.RegisterObserver(vm);
+                _ = _jobManager.ExecuteJob(job.Name);
+            }
+        }
+
+        public void RefreshRunningJobs()
+        {
+            GlobalTotalFiles = RunningJobs.Sum(j => j.TotalFiles);
+            GlobalProcessedFiles = RunningJobs.Sum(j => j.ProcessedFiles);
+            OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
+        }
+    }
+
+    public class RunningJobViewModel : ViewModelBase, IBackupObserver
+{
+    public string JobName { get; }
+    private readonly Action _onUpdated;
+
+    private string _state = "Inactive";
+    public string State
+    {
+        get => _state;
+        private set => SetProperty(ref _state, value);
+    }
+
+    public void StartSingleJob(string jobName)
+        {
             if (RunningJobs.Any(x => x.JobName == jobName)) return;
 
             Application.Current.Dispatcher.Invoke(() =>
@@ -135,6 +199,26 @@ namespace EasySave.ViewModel
         private RunningJobViewModel? GetJobVm(string name)
         {
             return RunningJobs.FirstOrDefault(v => v.JobName == name);
+        }
+
+        public void OnJobUpdated(StatusSnapshot snapshot)
+        {
+            if (snapshot.JobName != JobName)
+                return;
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                State = snapshot.State;
+                TotalFiles = snapshot.TotalFiles;
+                TotalSize = snapshot.TotalSize;
+                ProcessedFiles = snapshot.ProcessedFiles;
+                ProcessedSize = snapshot.ProcessedSize;
+                CurrentSourceFile = snapshot.CurrentSourceFile;
+                CurrentDestinationFile = snapshot.CurrentDestinationFile;
+
+                OnPropertyChanged(nameof(Percentage));
+                _onUpdated?.Invoke();
+            });
         }
     }
 }

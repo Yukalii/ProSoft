@@ -39,7 +39,7 @@ public class BackupJobManager
         string jobsFilePath,
         IStorage storage,
         ILogger logger,
-        IBackupObserver statusObserver,
+        IBackupObserver? statusObserver,
         AppConfig config,
         IBusinessSoftwareManager businessSoftware)
     {
@@ -50,7 +50,9 @@ public class BackupJobManager
         _businessSoftware = businessSoftware;
 
         // Add initial observer
-        _globalObservers.Add(statusObserver);
+        if (statusObserver != null)
+            _observers.Add(statusObserver);
+
         LoadJobs();
     }
 
@@ -131,8 +133,6 @@ public class BackupJobManager
                     $"{name}_status.json"
                 );
 
-                var statusTracker = new StatusTracker(statusFile);
-
                 var strategy = CreateStrategy(job.Strategy.GetType().Name);
 
                 // Create a fresh job instance for this execution
@@ -149,10 +149,10 @@ public class BackupJobManager
                     _businessSoftware
                 );
 
-                // Attach all observers (UI observers)
-                lock (_globalObservers)
-                    foreach (var obs in _globalObservers)
-                        jobInstance.AttachObserver(obs);
+            var statusTracker = new StatusTracker(statusFile);
+
+            foreach (var obs in _observers)
+                jobInstance.AttachObserver(obs);
 
                 lock (_jobObservers)
                     if (_jobObservers.TryGetValue(name, out var dedicated))
@@ -303,9 +303,16 @@ public class BackupJobManager
                    ?? new List<BackupJobDTO>();
 
         Jobs = jobDtos.Select(dto => new BackupJob(
-            dto.Name, dto.SourcePath, dto.TargetPath,
+            dto.Name, 
+            dto.SourcePath, 
+            dto.TargetPath,
             CreateStrategy(dto.StrategyType),
-            _sharedStorage, _sharedLogger, _config, _largeFileSemaphore, LargeFileThresholdKb, _businessSoftware)).ToList();
+            _sharedStorage, 
+            _sharedLogger, 
+            _config, 
+            _largeFileSemaphore, 
+            LargeFileThresholdKb, 
+            _businessSoftware)).ToList();
     }
 
     private void SaveJobs()

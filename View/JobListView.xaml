@@ -9,68 +9,46 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Title -->
         <TextBlock Text="{Binding DataContext.Loc[jobs_title], RelativeSource={RelativeSource AncestorType=Window}}"
                    FontSize="18" FontWeight="Bold" Margin="0,0,0,16"/>
 
-        <!-- JOB LIST -->
         <ListView Grid.Row="1"
                   ItemsSource="{Binding Jobs}"
                   SelectedItem="{Binding SelectedJob}"
                   BorderThickness="1">
-
             <ListView.View>
                 <GridView>
-
-                    <!-- Checkbox column -->
                     <GridViewColumn Width="40">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" 
+                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                           HorizontalAlignment="Center"
-                                            Click="CheckBox_Click"/>
+                                          Click="CheckBox_Click"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-
-                    <!-- Job Name -->
                     <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_name], RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Width="200"
-                                    DisplayMemberBinding="{Binding Job.Name}"/>
-
-                    <!-- Source Path -->
+                                    Width="200" DisplayMemberBinding="{Binding Job.Name}"/>
                     <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_source], RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Width="220"
-                                    DisplayMemberBinding="{Binding Job.SourcePath}"/>
-
-                    <!-- Target Path -->
+                                    Width="220" DisplayMemberBinding="{Binding Job.SourcePath}"/>
                     <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_target], RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Width="220"
-                                    DisplayMemberBinding="{Binding Job.TargetPath}"/>
-
-                    <!-- Strategy -->
+                                    Width="220" DisplayMemberBinding="{Binding Job.TargetPath}"/>
                     <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_strategy], RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Width="180"
-                                    DisplayMemberBinding="{Binding Job.StrategyName}"/>
-
+                                    Width="180" DisplayMemberBinding="{Binding Job.StrategyName}"/>
                 </GridView>
             </ListView.View>
         </ListView>
 
-        <!-- ACTION BUTTONS -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,16,0,0">
-
             <Button Content="{Binding DataContext.Loc[jobs_add], RelativeSource={RelativeSource AncestorType=Window}}"
                     Command="{Binding DataContext.ShowJobEditorCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     Padding="12,6" Margin="0,0,8,0"/>
-
             <Button Content="{Binding DataContext.Loc[jobs_delete], RelativeSource={RelativeSource AncestorType=Window}}"
                     Command="{Binding DeleteJobCommand}"
                     Padding="12,6" Margin="0,0,8,0"/>
 
-            <!-- Run single job (row selection) -->
             <Button Content="{Binding DataContext.Loc[jobs_run], RelativeSource={RelativeSource AncestorType=Window}}"
-                    Command="{Binding RunJobCommand}"
+                    Command="{Binding DataContext.RunSelectedJobsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     Padding="12,6" Margin="0,0,8,0"/>
 
             <Button Content="{Binding DataContext.Loc[jobs_edit], RelativeSource={RelativeSource AncestorType=Window}}"
