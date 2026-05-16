@@ -6,7 +6,6 @@ namespace EasySave.ViewModel
     public class BackupExecutionViewModel : ViewModelBase
     {
         private readonly BackupJobManager _jobManager;
-
         private readonly Action _onGoBack;
         private List<BackupJob> _lastJobs = new();
 
@@ -31,14 +30,9 @@ namespace EasySave.ViewModel
 
         public ICommand GoBackCommand { get; }
         public ICommand RelaunchCommand { get; }
-
-        public ICommand StartSingleJobCommand { get; }
-        public ICommand StartMultipleJobsCommand { get; }
-
         public ICommand PauseSingleJobCommand { get; }
         public ICommand PlaySingleJobCommand { get; }
         public ICommand StopSingleJobCommand { get; }
-
         public ICommand PauseAllCommand { get; }
         public ICommand PlayAllCommand { get; }
         public ICommand StopAllCommand { get; }
@@ -61,18 +55,6 @@ namespace EasySave.ViewModel
                 },
                 _ => _lastJobs.Count > 0
             );
-
-            StartSingleJobCommand = new RelayCommand(jobName =>
-            {
-                if (jobName is string name && !string.IsNullOrWhiteSpace(name))
-                    StartSingleJob(name);
-            });
-
-            StartMultipleJobsCommand = new RelayCommand(jobs =>
-            {
-                if (jobs is IEnumerable<BackupJob> list)
-                    StartMultipleJobs(list);
-            });
 
             PauseSingleJobCommand = new RelayCommand(jobName =>
             {
@@ -104,21 +86,16 @@ namespace EasySave.ViewModel
             PauseAllCommand = new RelayCommand(_ =>
             {
                 _jobManager.PauseAll();
-                foreach (var vm in RunningJobs)
-                    vm.SetPaused(true);
+                foreach (var vm in RunningJobs) vm.SetPaused(true);
             });
 
             PlayAllCommand = new RelayCommand(_ =>
             {
                 _jobManager.PlayAll();
-                foreach (var vm in RunningJobs)
-                    vm.SetPaused(false);
+                foreach (var vm in RunningJobs) vm.SetPaused(false);
             });
 
-            StopAllCommand = new RelayCommand(_ =>
-            {
-                _jobManager.StopAll();
-            });
+            StopAllCommand = new RelayCommand(_ => _jobManager.StopAll());
         }
 
         public void Reset()
@@ -128,54 +105,38 @@ namespace EasySave.ViewModel
             GlobalProcessedFiles = 0;
             OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
         }
-        /*
+
         public void StartSingleJob(string jobName)
         {
             var job = _jobManager.Jobs.FirstOrDefault(j => j.Name == jobName);
             if (job == null) return;
 
             _lastJobs = new List<BackupJob> { job };
+            CommandManager.InvalidateRequerySuggested();
+
+            if (RunningJobs.Any(x => x.JobName == jobName)) return;
 
             var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
             RunningJobs.Add(vm);
-            _jobManager.RegisterObserver(vm);
+            _jobManager.RegisterJobObserver(jobName, vm);
             _ = _jobManager.ExecuteJob(jobName);
-        }*/
-
-        public void StartSingleJob(string jobName)
-        {
-            if (RunningJobs.Any(x => x.JobName == jobName)) return;
-
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
-                RunningJobs.Add(vm);
-                _jobManager.RegisterJobObserver(jobName, vm);
-                _ = _jobManager.ExecuteJob(jobName);
-            });
         }
 
         public void StartMultipleJobs(IEnumerable<BackupJob> jobs)
         {
             _lastJobs = jobs.ToList();
+            CommandManager.InvalidateRequerySuggested();
 
             foreach (var job in _lastJobs)
             {
+                if (RunningJobs.Any(x => x.JobName == job.Name)) continue;
+
                 var vm = new RunningJobViewModel(job.Name, RefreshRunningJobs);
                 RunningJobs.Add(vm);
-                _jobManager.RegisterObserver(vm);
+                _jobManager.RegisterJobObserver(job.Name, vm);
                 _ = _jobManager.ExecuteJob(job.Name);
             }
         }
-
-        /*
-         public void StartMultipleJobs(IEnumerable<BackupJob> jobs)
-        {
-            foreach (var job in jobs)
-            {
-                StartSingleJob(job.Name);
-            }
-        }*/
 
         public void RefreshRunningJobs()
         {
@@ -185,8 +146,6 @@ namespace EasySave.ViewModel
         }
 
         private RunningJobViewModel? GetJobVm(string name)
-        {
-            return RunningJobs.FirstOrDefault(v => v.JobName == name);
-        }
+            => RunningJobs.FirstOrDefault(v => v.JobName == name);
     }
 }
