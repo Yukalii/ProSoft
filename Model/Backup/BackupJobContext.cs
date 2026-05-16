@@ -63,6 +63,11 @@ namespace EasySave.Model.Backup
 
         public IBusinessSoftwareManager? BusinessSoftware { get; }
 
+        /// <summary>
+        /// Shared gate controlling priority file ordering across all concurrent jobs.
+        /// </summary>
+        public PriorityGate? PriorityGate { get; }
+
         public BackupJobContext(
             string jobName,
             string sourcePath,
@@ -74,7 +79,8 @@ namespace EasySave.Model.Backup
             SemaphoreSlim largeFileSemaphore,
             int largeFileThresholdKb,
             JobControlToken? controlToken = null,
-            IBusinessSoftwareManager? businessSoftware = null)
+            IBusinessSoftwareManager? businessSoftware = null,
+            PriorityGate? priorityGate = null)
         {
             JobName = jobName;
             SourcePath = sourcePath;
@@ -87,6 +93,7 @@ namespace EasySave.Model.Backup
             LargeFileSemaphore = largeFileSemaphore;
             LargeFileThresholdKb = largeFileThresholdKb;
             BusinessSoftware = businessSoftware;
+            PriorityGate = priorityGate;
         }
     }
 }

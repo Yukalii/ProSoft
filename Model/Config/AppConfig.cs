@@ -15,6 +15,7 @@ namespace EasySave.Model.Config
         public string CryptoSoftPath { get; set; } = "CryptoSoft.exe";
         public string CryptoSoftKey { get; set; } = "secretKey";
         public List<string> EncryptedExtensions { get; set; } = [".pdf", ".txt", ".png"];
+        public List<string> PriorityExtensions { get; set; } = [];
 
         public string BusinessApp { get; set; } = "CalculatorApp";
 
@@ -32,7 +33,8 @@ namespace EasySave.Model.Config
                 DefaultBackupLocation = "Backups",
                 CryptoSoftPath = "CryptoSoft.exe",
                 CryptoSoftKey = "secretKey",
-                EncryptedExtensions = [".pdf", ".txt", ".png"]
+                EncryptedExtensions = [".pdf", ".txt", ".png"],
+                PriorityExtensions = []
             };
         }
     }

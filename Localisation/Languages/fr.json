@@ -57,5 +57,7 @@
   "settings_cryptokey": "Clé de chiffrement :",
   "settings_extensions": "Extensions chiffrées :",
   "settings_add_extension": "➕ Ajouter",
+  "settings_priority_extensions": "Extensions prioritaires :",
+  "settings_largefilelimit": "Limite grand fichier :",
   "settings_save": "💾 Sauvegarder"
 }

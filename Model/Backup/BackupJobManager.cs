@@ -26,6 +26,9 @@ public class BackupJobManager
     private readonly Dictionary<string, JobControlToken> _controlTokens = new();
 
     private readonly SemaphoreSlim _largeFileSemaphore = new(1, 1);
+
+    private readonly PriorityGate _priorityGate = new();
+
     public int LargeFileThresholdKb => _config.LargeFileThresholdKb;
 
     public int? MaxJobs { get; set; } = null;
@@ -145,7 +148,8 @@ public class BackupJobManager
                     _config,
                     _largeFileSemaphore,
                     LargeFileThresholdKb,
-                    _businessSoftware
+                    _businessSoftware,
+                    _priorityGate
                 );
 
             var statusTracker = new StatusTracker(statusFile);
