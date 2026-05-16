@@ -179,13 +179,14 @@ public class BackupJobManager
             finally
             {
                 lock (_waitingJobs)
-                {
                     _waitingJobs.Remove(name);
-                }
+
+                lock (_runningJobs)
+                    _runningJobs.Remove(name);
+
                 lock (_jobObservers)
-                {
                     _jobObservers.Remove(name);
-                }
+
                 lock (_controlTokens)
                 {
                     if (_controlTokens.TryGetValue(name, out var token))
