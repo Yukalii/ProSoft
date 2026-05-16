@@ -15,6 +15,7 @@ namespace EasySave.ViewModel
         public List<string> LogFormats { get; } = new List<string> { "json", "xml" };
 
         public ObservableCollection<string> EncryptedExtensions { get; }
+        public ObservableCollection<string> PriorityExtensions { get; }
 
         public string SelectedLanguage
         {
@@ -77,9 +78,22 @@ namespace EasySave.ViewModel
             }
         }
 
+        private string _newPriorityExtension = string.Empty;
+        public string NewPriorityExtension
+        {
+            get => _newPriorityExtension;
+            set
+            {
+                _newPriorityExtension = value;
+                OnPropertyChanged();
+            }
+        }
+
         public ICommand SaveCommand { get; }
         public ICommand AddExtensionCommand { get; }
         public ICommand RemoveExtensionCommand { get; }
+        public ICommand AddPriorityExtensionCommand { get; }
+        public ICommand RemovePriorityExtensionCommand { get; }
 
         public SettingsViewModel(
             LocalisationService localisation,
@@ -102,6 +116,16 @@ namespace EasySave.ViewModel
 
             RemoveExtensionCommand = new RelayCommand(
                 ext => RemoveExtension(ext as string));
+
+            PriorityExtensions = new ObservableCollection<string>(
+                configManager.Config.PriorityExtensions);
+
+            AddPriorityExtensionCommand = new RelayCommand(
+                _ => AddPriorityExtension(),
+                _ => !string.IsNullOrWhiteSpace(NewPriorityExtension));
+
+            RemovePriorityExtensionCommand = new RelayCommand(
+                ext => RemovePriorityExtension(ext as string));
         }
 
         private void AddExtension()
@@ -121,9 +145,27 @@ namespace EasySave.ViewModel
                 EncryptedExtensions.Remove(ext);
         }
 
+        private void AddPriorityExtension()
+        {
+            string ext = NewPriorityExtension.Trim();
+            if (!ext.StartsWith('.')) ext = "." + ext;
+
+            if (!PriorityExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
+                PriorityExtensions.Add(ext.ToLowerInvariant());
+
+            NewPriorityExtension = string.Empty;
+        }
+
+        private void RemovePriorityExtension(string? ext)
+        {
+            if (ext != null)
+                PriorityExtensions.Remove(ext);
+        }
+
         public void SaveSettings()
         {
             _configManager.Config.EncryptedExtensions = EncryptedExtensions.ToList();
+            _configManager.Config.PriorityExtensions = PriorityExtensions.ToList();
             _configManager.Config.LargeFileThresholdKb = LargeFileThresholdKb;
             _configManager.Save();
 

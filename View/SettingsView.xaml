@@ -12,6 +12,8 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="170"/>
@@ -142,7 +144,69 @@
                     Padding="10,4"/>
         </Grid>
 
-        <Button Grid.Row="8" Grid.ColumnSpan="2"
+        <TextBlock Grid.Row="8" Grid.Column="0"
+           Text="{Binding DataContext.Loc[settings_priority_extensions],
+                  RelativeSource={RelativeSource AncestorType=Window}}"
+           VerticalAlignment="Top" Margin="0,4,0,0"/>
+
+        <ListBox Grid.Row="8" Grid.Column="1"
+         ItemsSource="{Binding PriorityExtensions}"
+         MaxHeight="130" Margin="0,0,0,8"
+         BorderThickness="1" BorderBrush="#CCCCCC"
+         HorizontalContentAlignment="Stretch">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding}"
+                           VerticalAlignment="Center" Margin="4,0,0,0"/>
+                        <Button Grid.Column="1" Content="X"
+                        Command="{Binding DataContext.RemovePriorityExtensionCommand,
+                                  RelativeSource={RelativeSource AncestorType=ListBox}}"
+                        CommandParameter="{Binding}"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="#CC0000" Cursor="Hand" Padding="6,2" FontSize="11"/>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <Grid Grid.Row="9" Grid.Column="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0" MinWidth="150" Margin="0,0,8,0">
+                <TextBox Text="{Binding NewPriorityExtension, UpdateSourceTrigger=PropertyChanged}"
+                 Padding="4,3"/>
+                <TextBlock Text=".docx" Foreground="Gray" Margin="6,0,0,0"
+                   VerticalAlignment="Center" IsHitTestVisible="False" Padding="0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding NewPriorityExtension}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding NewPriorityExtension}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+            <Button Grid.Column="1"
+            Content="{Binding DataContext.Loc[settings_add_extension],
+                      RelativeSource={RelativeSource AncestorType=Window}}"
+            Command="{Binding AddPriorityExtensionCommand}"
+            Padding="10,4"/>
+        </Grid>
+
+        <Button Grid.Row="10" Grid.ColumnSpan="2"
                 Content="{Binding DataContext.Loc[settings_save], RelativeSource={RelativeSource AncestorType=Window}}"
                 Command="{Binding SaveCommand}"
                 HorizontalAlignment="Left" Padding="12,6"/>

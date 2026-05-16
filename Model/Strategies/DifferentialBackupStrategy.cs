@@ -1,4 +1,4 @@
-﻿using EasySave.Model.Backup;
+using EasySave.Model.Backup;
 using EasySave.Model.Encryption;
 using EasySave.Model.Logger;
 using EasySave.Model.Observers;
@@ -16,15 +16,15 @@ namespace EasySave.Model.Strategies
         public async Task ExecuteAsync(BackupJobContext context)
         {
             var storage = context.Storage;
-            var logger = context.Logger;
             var observers = context.Observers;
             var control = context.ControlToken;
 
             var allFiles = storage.EnumerateFiles(context.SourcePath).ToList();
 
+            // Pre-filter: only keep files that actually need to be copied
             var filesToCopy = allFiles.Where(file =>
             {
-                string rel = Path.GetRelativePath(context.SourcePath, file);
+                string rel  = Path.GetRelativePath(context.SourcePath, file);
                 string dest = Path.Combine(context.TargetPath, rel);
                 var srcInfo = storage.GetFileInfo(file);
                 var dstInfo = storage.GetFileInfo(dest);
@@ -33,24 +33,49 @@ namespace EasySave.Model.Strategies
                     || srcInfo.Size != dstInfo.Size;
             }).ToList();
 
-            int totalFiles = filesToCopy.Count;
-            long totalSize = filesToCopy.Sum(f => storage.GetFileInfo(f).Size);
+            // Priority classification (applied on filesToCopy only)
+            var priorityExts = context.Config.PriorityExtensions
+                .Select(e => e.ToLowerInvariant())
+                .ToHashSet();
 
+            var priorityFiles = filesToCopy
+                .Where(f => priorityExts.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                .ToList();
+            var normalFiles = filesToCopy
+                .Where(f => !priorityExts.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                .ToList();
+
+            context.PriorityGate?.AddPendingPriority(priorityFiles.Count);
+
+            // Process priority files first, then normal files
+            var orderedFiles = priorityFiles.Concat(normalFiles).ToList();
+
+            int  totalFiles    = orderedFiles.Count;
+            long totalSize     = orderedFiles.Sum(f => storage.GetFileInfo(f).Size);
             long processedSize = 0;
-            int processedFiles = 0;
+            int  processedFiles = 0;
 
             try
             {
-                foreach (var sourceFile in filesToCopy)
+                foreach (var sourceFile in orderedFiles)
                 {
                     control?.WaitIfPaused();
 
-                    string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
+                    bool isPriority = priorityExts.Contains(
+                        Path.GetExtension(sourceFile).ToLowerInvariant());
+
+                    // Gate: block non-priority file while priority files are pending anywhere
+                    if (!isPriority && context.PriorityGate != null)
+                    {
+                        await context.PriorityGate.WaitForClearanceAsync(
+                            control?.Token ?? CancellationToken.None);
+                    }
+
+                    string relativePath    = Path.GetRelativePath(context.SourcePath, sourceFile);
                     string destinationFile = Path.Combine(context.TargetPath, relativePath);
 
                     var sourceInfo = storage.GetFileInfo(sourceFile);
-
-                    bool isLarge = sourceInfo.Size > context.LargeFileThresholdKb * 1024;
+                    bool isLarge   = sourceInfo.Size > context.LargeFileThresholdKb * 1024;
 
                     // Business Software management
                     if (context.BusinessSoftware != null)
@@ -67,34 +92,32 @@ namespace EasySave.Model.Strategies
                             await Task.Delay(1000);
                         }
                     }
+
                     // Limit concurrency for large files
                     if (isLarge)
-                        await context.LargeFileSemaphore.WaitAsync();
+                        await context.LargeFileSemaphore.WaitAsync(
+                            control?.Token ?? CancellationToken.None);
 
                     try
                     {
                         Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
 
                         var stopwatch = Stopwatch.StartNew();
-                        bool success = storage.CopyFile(sourceFile, destinationFile, control);
+                        bool success  = storage.CopyFile(sourceFile, destinationFile, control);
                         stopwatch.Stop();
-
-                        long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
 
                         int encryptionTime = 0;
                         if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
-                        {
                             encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
-                        }
 
-                        logger.LogEntry(new LogEntry
+                        context.Logger.LogEntry(new LogEntry
                         {
-                            Timestamp = DateTime.Now,
-                            JobName = context.JobName,
-                            SourcePath = sourceFile,
-                            DestinationPath = destinationFile,
-                            FileSize = sourceInfo.Size,
-                            TransferTimeMs = transferTime,
+                            Timestamp        = DateTime.Now,
+                            JobName          = context.JobName,
+                            SourcePath       = sourceFile,
+                            DestinationPath  = destinationFile,
+                            FileSize         = sourceInfo.Size,
+                            TransferTimeMs   = success ? stopwatch.ElapsedMilliseconds : -1,
                             EncryptionTimeMs = encryptionTime
                         });
 
@@ -110,20 +133,23 @@ namespace EasySave.Model.Strategies
                     {
                         if (isLarge)
                             context.LargeFileSemaphore.Release();
+
+                        // Always notify gate when a priority file is done (copied or skipped)
+                        if (isPriority)
+                            context.PriorityGate?.OnePriorityDone();
                     }
                 }
 
                 Notify(observers, new StatusSnapshot(
                     context.JobName, DateTime.Now, "Inactive",
-                    totalFiles, totalSize, processedFiles, processedSize,
-                    null, null));
+                    totalFiles, totalSize, processedFiles, processedSize, null, null));
             }
             catch (OperationCanceledException)
             {
                 Notify(observers, new StatusSnapshot(
                     context.JobName, DateTime.Now, "Stopped",
-                    totalFiles, totalSize, processedFiles, processedSize,
-                    null, null));
+                    totalFiles, totalSize, processedFiles, processedSize, null, null));
+                throw;
             }
         }
 

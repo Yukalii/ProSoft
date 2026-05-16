@@ -55,6 +55,7 @@
   "settings_cryptokey": "Encryption key :",
   "settings_extensions": "Encrypted extensions :",
   "settings_add_extension": "➕ Add",
-  "settings_save": "💾 Save",
-  "settings_largefilelimit": "File Limit :"
+  "settings_priority_extensions": "Priority extensions :",
+  "settings_largefilelimit": "Large file limit :",
+  "settings_save": "💾 Save"
 }

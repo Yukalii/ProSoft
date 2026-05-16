@@ -27,6 +27,7 @@ namespace EasySave.Model.Backup
         private readonly List<IBackupObserver> _observers;
         private readonly AppConfig _config;
         private readonly IBusinessSoftwareManager _businessSoftware;
+        private readonly PriorityGate? _priorityGate;
 
         public BackupJob(
             string name,
@@ -38,8 +39,9 @@ namespace EasySave.Model.Backup
             AppConfig config,
             SemaphoreSlim largeFileSemaphore,
             int largeFileThresholdKb,
-            IBusinessSoftwareManager businessSoftware)
-            
+            IBusinessSoftwareManager businessSoftware,
+            PriorityGate? priorityGate = null)
+
         {
             Name = name;
             SourcePath = sourcePath;
@@ -52,6 +54,7 @@ namespace EasySave.Model.Backup
             _largeFileSemaphore = largeFileSemaphore;
             _largeFileThresholdKb = largeFileThresholdKb;
             _businessSoftware = businessSoftware;
+            _priorityGate = priorityGate;
         }
 
         /// <summary>
@@ -100,7 +103,8 @@ namespace EasySave.Model.Backup
                 _largeFileSemaphore,
                 _largeFileThresholdKb,
                 controlToken,
-                _businessSoftware);
+                _businessSoftware,
+                _priorityGate);
         }
     }
 }
