@@ -35,12 +35,12 @@
   "exec_btn_back": "← Back to jobs",
   "exec_btn_relaunch": "↺ Relaunch",
 
-  "exec_play_button":  "Play",
-  "exec_pause_button":  "Pause",
-  "exec_stop_button":  "Stop",
-  "exec_play_all_button":  "Play all",
-  "exec_pause_all_button":  "Pause all",
-  "exec_stop_all_button":  "Stop all",
+  "exec_play_button": "Play",
+  "exec_pause_button": "Pause",
+  "exec_stop_button": "Stop",
+  "exec_play_all_button": "Play all",
+  "exec_pause_all_button": "Pause all",
+  "exec_stop_all_button": "Stop all",
 
   "ExecSectionProgressGlobal": "Global progress",
   "ExecGlobalFiles": "Files",
@@ -58,4 +58,6 @@
   "settings_save": "💾 Save",
   "settings_log_storage_mode": "Log storage mode :",
   "settings_log_server_url":   "Log server URL :"
+  "settings_priority_extensions": "Priority extensions :",
+  "settings_largefilelimit": "Large file limit :"
 }

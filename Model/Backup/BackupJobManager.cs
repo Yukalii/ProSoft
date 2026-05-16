@@ -25,6 +25,9 @@ public class BackupJobManager
     private readonly Dictionary<string, JobControlToken> _controlTokens = new();
 
     private readonly SemaphoreSlim _largeFileSemaphore = new(1, 1);
+
+    private readonly PriorityGate _priorityGate = new();
+
     public int LargeFileThresholdKb => _config.LargeFileThresholdKb;
 
     public int? MaxJobs { get; set; } = null;
@@ -143,7 +146,8 @@ public class BackupJobManager
                     _config,
                     _largeFileSemaphore,
                     LargeFileThresholdKb,
-                    _businessSoftware
+                    _businessSoftware,
+                    _priorityGate
                 );
 
             var statusTracker = new StatusTracker(statusFile);
@@ -173,13 +177,14 @@ public class BackupJobManager
             finally
             {
                 lock (_waitingJobs)
-                {
                     _waitingJobs.Remove(name);
-                }
+
+                lock (_runningJobs)
+                    _runningJobs.Remove(name);
+
                 lock (_jobObservers)
-                {
                     _jobObservers.Remove(name);
-                }
+
                 lock (_controlTokens)
                 {
                     if (_controlTokens.TryGetValue(name, out var token))

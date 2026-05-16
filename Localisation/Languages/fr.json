@@ -35,20 +35,18 @@
   "exec_btn_back": "← Retour aux jobs",
   "exec_btn_relaunch": "↺ Relancer",
 
-  "exec_play_button":  "Lancer",
-  "exec_pause_button":  "Pause",
-  "exec_stop_button":  "Stop",
-  "exec_play_all_button":  "Lancer tout",
-  "exec_pause_all_button":  "Mettre tout en pause",
-  "exec_stop_all_button":  "Stopper tout",
+  "exec_play_button": "Lancer",
+  "exec_pause_button": "Pause",
+  "exec_stop_button": "Stop",
+  "exec_play_all_button": "Lancer tout",
+  "exec_pause_all_button": "Mettre tout en pause",
+  "exec_stop_all_button": "Stopper tout",
 
   "ExecSectionProgressGlobal": "Progression globale",
   "ExecGlobalFiles": "Fichiers",
   "ExecSectionRunningJobs": "Tâches en cours",
   "ExecPercentage": "Pourcentage",
   "ExecCurrentFile": "Fichier en cours",
-
-
 
   "settings_title": "Paramètres",
   "settings_language": "Langue :",
@@ -60,4 +58,6 @@
   "settings_save": "💾 Sauvegarder",
   "settings_log_storage_mode": "Mode de stockage des logs :",
   "settings_log_server_url":   "URL du serveur de logs :"
+  "settings_priority_extensions": "Extensions prioritaires :",
+  "settings_largefilelimit": "Limite grand fichier :"
 }

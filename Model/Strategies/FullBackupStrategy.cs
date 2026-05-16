@@ -13,17 +13,38 @@ namespace EasySave.Model.Strategies
         public async Task ExecuteAsync(BackupJobContext context)
         {
             var allFiles = context.Storage.EnumerateFiles(context.SourcePath).ToList();
+            var priorityExts = context.Config.PriorityExtensions.Select(e => e.ToLowerInvariant()).ToHashSet();
+            var priorityFiles = allFiles.Where(f => priorityExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
+            var normalFiles = allFiles.Where(f => !priorityExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
+
+            // Register priority count in the shared gate BEFORE iterating
+            context.PriorityGate?.AddPendingPriority(priorityFiles.Count);
+
+            // Process priority files first, then normal files
+            var orderedFiles = priorityFiles.Concat(normalFiles).ToList();
+
             long totalSize = allFiles.Sum(f => context.Storage.GetFileInfo(f).Size);
             int totalFiles = allFiles.Count;
             long processedSize = 0;
             int processedFiles = 0;
 
+            bool isPriority = false; // tracks which half we are in
+
             try
             {
-                foreach (var sourceFile in allFiles)
+                foreach (var sourceFile in orderedFiles)
                 {
-                    // Business Softwaree Management
+                    isPriority = priorityExts.Contains(
+                        Path.GetExtension(sourceFile).ToLowerInvariant());
+
                     context.ControlToken?.WaitIfPaused();
+
+                    // Gate: block non-priority file while any job has priority pending
+                    if (!isPriority && context.PriorityGate != null)
+                    {
+                        await context.PriorityGate.WaitForClearanceAsync(context.ControlToken?.Token ?? CancellationToken.None);
+                    }
+
                     if (context.BusinessSoftware != null)
                     {
                         while (context.BusinessSoftware.SoftwareIsRunning())
@@ -58,7 +79,8 @@ namespace EasySave.Model.Strategies
                     try
                     {
                         var sw = Stopwatch.StartNew();
-                        bool success = context.Storage.CopyFile(sourceFile, destinationFile, context.ControlToken);
+                        bool success = context.Storage.CopyFile(sourceFile, destinationFile,
+                            context.ControlToken);
                         sw.Stop();
 
                         int encTime = (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
@@ -89,20 +111,26 @@ namespace EasySave.Model.Strategies
                             context.LargeFileSemaphore.Release();
                             // Debug.WriteLine($"[EXIT] Semaphore released for large file: {sourceFile}");      // Defense test
                         }
+                        if (isPriority)
+                            context.PriorityGate?.OnePriorityDone();
                     }
                 }
 
                 Notify(context.Observers, new StatusSnapshot(
-                    context.JobName, DateTime.Now, "Inactive", 
-                    totalFiles, totalSize, processedFiles, processedSize, 
-                    null, null));
+                    context.JobName, DateTime.Now, "Inactive",
+                    totalFiles, totalSize, processedFiles, processedSize, null, null));
             }
             catch (OperationCanceledException)
             {
+                // If cancelled mid-priority-batch, drain remaining priority count
+                // so other jobs are not permanently blocked
+                int remaining = priorityFiles.Count - processedFiles; // rough estimate
+                for (int i = 0; i < Math.Max(0, remaining); i++)
+                    context.PriorityGate?.OnePriorityDone();
+
                 Notify(context.Observers, new StatusSnapshot(
-                    context.JobName, DateTime.Now, "Stopped", 
-                    totalFiles, totalSize, processedFiles, processedSize, 
-                    null, null));
+                    context.JobName, DateTime.Now, "Stopped",
+                    totalFiles, totalSize, processedFiles, processedSize, null, null));
                 throw;
             }
         }
