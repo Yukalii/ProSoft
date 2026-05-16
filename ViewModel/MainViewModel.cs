@@ -1,9 +1,6 @@
 using EasySave.Localisation;
-using EasySave.Model.Backup;
 using EasySave.Model.Config;
 using EasySave.Model.Logger;
-using System.Collections.ObjectModel;
-using System.Windows.Input;
 
 namespace EasySave.ViewModel
 {
@@ -12,11 +9,8 @@ namespace EasySave.ViewModel
         public BackupJobManager JobManager { get; }
         public LocalisationService Loc { get; }
 
-        // --- ViewModels ---
         public JobListViewModel JobListVM { get; }
         public SettingsViewModel SettingsVM { get; }
-
-        // One execution VM managing all running jobs
         public BackupExecutionViewModel BackupExecutionVM { get; }
 
         private ViewModelBase _currentViewModel = null!;
@@ -26,13 +20,10 @@ namespace EasySave.ViewModel
             set => SetProperty(ref _currentViewModel, value);
         }
 
-        // --- Navigation Commands ---
         public ICommand ShowJobsCommand { get; }
         public ICommand ShowExecutionCommand { get; }
         public ICommand ShowSettingsCommand { get; }
         public ICommand ShowJobEditorCommand { get; }
-
-        // --- Unified Execution Command ---
         public ICommand RunSelectedJobsCommand { get; }
 
         public MainViewModel(
@@ -44,15 +35,20 @@ namespace EasySave.ViewModel
             JobManager = jobManager;
             Loc = localisation;
 
-            // One execution VM for the whole execution view
-            BackupExecutionVM = new BackupExecutionViewModel(jobManager);
+            BackupExecutionVM = new BackupExecutionViewModel(
+    jobManager,
+    onGoBack: () =>
+    {
+        JobListVM.RefreshJobs();
+        CurrentViewModel = JobListVM;
+    }
+);
 
-            // Job list with callbacks
             JobListVM = new JobListViewModel(
                 jobManager,
                 onRunJob: jobName =>
                 {
-                    // Row-level "Run" button → treat as single job selection
+                    BackupExecutionVM.Reset();
                     BackupExecutionVM.StartSingleJob(jobName);
                     CurrentViewModel = BackupExecutionVM;
                 },
@@ -71,18 +67,13 @@ namespace EasySave.ViewModel
 
             SettingsVM = new SettingsViewModel(localisation, configManager, dynamicLogger);
 
-            // Navigation
             ShowJobsCommand = new RelayCommand(_ =>
             {
                 JobListVM.SelectedJob = null;
                 CurrentViewModel = JobListVM;
             });
 
-            ShowExecutionCommand = new RelayCommand(_ =>
-            {
-                CurrentViewModel = BackupExecutionVM;
-            });
-
+            ShowExecutionCommand = new RelayCommand(_ => CurrentViewModel = BackupExecutionVM);
             ShowSettingsCommand = new RelayCommand(_ => CurrentViewModel = SettingsVM);
 
             ShowJobEditorCommand = new RelayCommand(_ =>
@@ -94,7 +85,6 @@ namespace EasySave.ViewModel
                 });
             });
 
-            // Unified execution command
             RunSelectedJobsCommand = new RelayCommand(
                 _ => RunSelectedJobs(),
                 _ => JobListVM.SelectedJobs.Any()
@@ -103,27 +93,19 @@ namespace EasySave.ViewModel
             CurrentViewModel = JobListVM;
         }
 
-        public void Initialize()
-        {
-        }
-
-        //  Execution logic
+        public void Initialize() { }
 
         private void RunSelectedJobs()
         {
             var selectedJobs = JobListVM.SelectedJobs.ToList();
+            if (!selectedJobs.Any()) return;
 
-            if (!selectedJobs.Any())
-                return;
+            BackupExecutionVM.Reset();
 
             if (selectedJobs.Count == 1)
-            {
                 BackupExecutionVM.StartSingleJob(selectedJobs[0].Name);
-            }
             else
-            {
                 BackupExecutionVM.StartMultipleJobs(selectedJobs);
-            }
 
             CurrentViewModel = BackupExecutionVM;
         }

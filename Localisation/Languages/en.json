@@ -13,7 +13,7 @@
   "jobs_run": "▶ Run",
   "jobs_edit": "✏ Edit",
 
-  "editor_duplicate_name":  "A Job with this name already exists.",
+  "editor_duplicate_name": "A Job with this name already exists.",
   "editor_name": "Name :",
   "editor_source": "Source :",
   "editor_target": "Target :",
@@ -32,6 +32,8 @@
   "exec_total_files": "Total files:",
   "exec_processed_files": "Processed files:",
   "exec_processed_size": "Processed size:",
+  "exec_btn_back": "← Back to jobs",
+  "exec_btn_relaunch": "↺ Relaunch",
 
   "exec_play_button":  "Play",
   "exec_pause_button":  "Pause",

@@ -1,6 +1,3 @@
-using System.Windows;
-using System.Collections.ObjectModel;
-using System.Windows.Input;
 using EasySave.Model.Backup;
 using EasySave.Model.Observers;
 
@@ -9,6 +6,9 @@ namespace EasySave.ViewModel
     public class BackupExecutionViewModel : ViewModelBase
     {
         private readonly BackupJobManager _jobManager;
+
+        private readonly Action _onGoBack;
+        private List<BackupJob> _lastJobs = new();
 
         public ObservableCollection<RunningJobViewModel> RunningJobs { get; }
             = new ObservableCollection<RunningJobViewModel>();
@@ -29,6 +29,9 @@ namespace EasySave.ViewModel
 
         public int GlobalTotalFilesDisplay => GlobalTotalFiles > 0 ? GlobalTotalFiles : 1;
 
+        public ICommand GoBackCommand { get; }
+        public ICommand RelaunchCommand { get; }
+
         public ICommand StartSingleJobCommand { get; }
         public ICommand StartMultipleJobsCommand { get; }
 
@@ -40,9 +43,24 @@ namespace EasySave.ViewModel
         public ICommand PlayAllCommand { get; }
         public ICommand StopAllCommand { get; }
 
-        public BackupExecutionViewModel(BackupJobManager jobManager)
+        public BackupExecutionViewModel(BackupJobManager jobManager, Action onGoBack)
         {
             _jobManager = jobManager;
+            _onGoBack = onGoBack;
+
+            GoBackCommand = new RelayCommand(_ => _onGoBack());
+
+            RelaunchCommand = new RelayCommand(
+                _ =>
+                {
+                    Reset();
+                    if (_lastJobs.Count == 1)
+                        StartSingleJob(_lastJobs[0].Name);
+                    else
+                        StartMultipleJobs(_lastJobs);
+                },
+                _ => _lastJobs.Count > 0
+            );
 
             StartSingleJobCommand = new RelayCommand(jobName =>
             {
@@ -103,6 +121,27 @@ namespace EasySave.ViewModel
             });
         }
 
+        public void Reset()
+        {
+            RunningJobs.Clear();
+            GlobalTotalFiles = 0;
+            GlobalProcessedFiles = 0;
+            OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
+        }
+        /*
+        public void StartSingleJob(string jobName)
+        {
+            var job = _jobManager.Jobs.FirstOrDefault(j => j.Name == jobName);
+            if (job == null) return;
+
+            _lastJobs = new List<BackupJob> { job };
+
+            var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
+            RunningJobs.Add(vm);
+            _jobManager.RegisterObserver(vm);
+            _ = _jobManager.ExecuteJob(jobName);
+        }*/
+
         public void StartSingleJob(string jobName)
         {
             if (RunningJobs.Any(x => x.JobName == jobName)) return;
@@ -118,17 +157,30 @@ namespace EasySave.ViewModel
 
         public void StartMultipleJobs(IEnumerable<BackupJob> jobs)
         {
+            _lastJobs = jobs.ToList();
+
+            foreach (var job in _lastJobs)
+            {
+                var vm = new RunningJobViewModel(job.Name, RefreshRunningJobs);
+                RunningJobs.Add(vm);
+                _jobManager.RegisterObserver(vm);
+                _ = _jobManager.ExecuteJob(job.Name);
+            }
+        }
+
+        /*
+         public void StartMultipleJobs(IEnumerable<BackupJob> jobs)
+        {
             foreach (var job in jobs)
             {
                 StartSingleJob(job.Name);
             }
-        }
+        }*/
 
         public void RefreshRunningJobs()
         {
             GlobalTotalFiles = RunningJobs.Sum(j => j.TotalFiles);
             GlobalProcessedFiles = RunningJobs.Sum(j => j.ProcessedFiles);
-
             OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
         }
 

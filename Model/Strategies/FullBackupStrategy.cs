@@ -23,7 +23,7 @@ namespace EasySave.Model.Strategies
             {
                 foreach (var sourceFile in allFiles)
                 {
-                    // BUsiness Softwaree Management
+                    // Business Softwaree Management
                     context.ControlToken?.WaitIfPaused();
                     if (context.BusinessSoftware != null)
                     {
