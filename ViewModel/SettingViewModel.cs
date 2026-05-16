@@ -1,6 +1,5 @@
 using EasySave.Model.Config;
 using EasySave.Localisation;
-using EasySave.Model.Logger;
 
 namespace EasySave.ViewModel
 {
@@ -15,6 +14,8 @@ namespace EasySave.ViewModel
         public List<string> LogFormats { get; } = new List<string> { "json", "xml" };
 
         public ObservableCollection<string> EncryptedExtensions { get; }
+
+        public List<string> LogStorageModes { get; } = Enum.GetNames<LogStorageMode>().ToList();
 
         public string SelectedLanguage
         {
@@ -76,6 +77,26 @@ namespace EasySave.ViewModel
                 OnPropertyChanged();
             }
         }
+
+        public string SelectedLogStorageMode
+        {
+            get => _configManager.Config.LogStorageMode.ToString();
+            set
+            {
+                if (Enum.TryParse<LogStorageMode>(value, out var mode))
+                {
+                    _configManager.Config.LogStorageMode = mode;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string LogServerUrl
+        {
+            get => _configManager.Config.LogServerUrl;
+            set { _configManager.Config.LogServerUrl = value; OnPropertyChanged(); }
+        }
+
 
         public ICommand SaveCommand { get; }
         public ICommand AddExtensionCommand { get; }

@@ -1,4 +1,4 @@
-﻿namespace EasySave.Model.Logger
+﻿namespace EasyLog
 {
     /// <summary>
     /// A proxy logger that delegates to an inner logger instance.

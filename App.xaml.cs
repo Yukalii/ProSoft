@@ -2,7 +2,6 @@
 using EasySave.Localisation;
 using EasySave.Model.Backup;
 using EasySave.Model.Config;
-using EasySave.Model.Logger;
 using EasySave.Model.Storage;
 using EasySave.View;
 using EasySave.ViewModel;
@@ -41,11 +40,14 @@ namespace EasySave
             var localisation = new LocalisationService(Path.Combine(baseDir, "Languages"));
             localisation.LoadLanguage(configManager.Config.Language);
 
-            var baseLogger = LoggerFactory.Resolve(
+            var baseLogger = LoggerFactory.ResolveComposite(
                 configManager.Config.LogFormat,
-                Path.Combine(baseDir, configManager.Config.LogDirectory)
+                Path.Combine(baseDir, configManager.Config.LogDirectory),
+                configManager.Config.LogServerUrl,
+                () => configManager.Config.LogStorageMode
             );
             var dynamicLogger = new DynamicLogger(baseLogger);
+
             var storage = new LocalStorage();
             var businessSoftware = new BusinessSoftwareManager(configManager);
 
