@@ -23,13 +23,17 @@ namespace EasyLog
             {
                 try
                 {
+                    // FIX : Tout le processus de préparation et d'envoi doit être DANS le bloc try
                     string json = JsonSerializer.Serialize(entry);
                     var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                    // Envoi au serveur Docker
                     await _http.PostAsync($"{_serverUrl}/api/logs", content);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Network errors are silently ignored to avoid crashing the backup
+                    // Écrit l'erreur réseau dans la fenêtre de Sortie de Visual Studio sans faire crasher l'application
+                    System.Diagnostics.Debug.WriteLine($"[API LOGGER ERROR] Impossible d'envoyer le log au serveur : {ex.Message}");
                 }
             });
         }

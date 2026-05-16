@@ -150,10 +150,11 @@ namespace EasySave.ViewModel
 
             _localisation.LoadLanguage(_configManager.Config.Language);
 
-            ILogger newLogger = LoggerFactory.Resolve(
+            ILogger newLogger = LoggerFactory.ResolveComposite(
                 _configManager.Config.LogFormat,
-                _configManager.Config.LogDirectory);
-            _dynamicLogger.SwapLogger(newLogger);
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _configManager.Config.LogDirectory),
+            _configManager.Config.LogServerUrl,
+            () => _configManager.Config.LogStorageMode);
         }
     }
 }

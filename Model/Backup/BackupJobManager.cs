@@ -123,7 +123,6 @@ public class BackupJobManager
                     return;
 
                 var storage = new LocalStorage();
-                var logger = new JsonLogger(_config.LogDirectory);
 
                 // Create a unique status file for this job
                 string statusFile = Path.Combine(
@@ -140,7 +139,7 @@ public class BackupJobManager
                     job.TargetPath,
                     strategy,
                     storage,
-                    logger,
+                    _sharedLogger,
                     _config,
                     _largeFileSemaphore,
                     LargeFileThresholdKb,

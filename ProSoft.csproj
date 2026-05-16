@@ -25,6 +25,7 @@
 	<ItemGroup>
 		<Compile Remove="CryptoSoft\**\*.cs" />
 		<Compile Remove="EasyLog\**\*.cs" />
+		<Compile Remove="EasyLogServer\**\*" />
 	</ItemGroup>
 
 	<!-- Ensures CryptoSoft is built before ProSoft -->

@@ -64,7 +64,15 @@ namespace EasySave.Model.Strategies
                         int encTime = (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
                             ? CryptoSoftInvoker.EncryptFile(destinationFile, context.Config) : 0;
 
-                        context.Logger.LogEntry(new LogEntry { });
+                        context.Logger.LogEntry(new LogEntry {
+                            Timestamp = DateTime.Now,
+                            JobName = context.JobName,
+                            SourcePath = sourceFile,
+                            DestinationPath = destinationFile,
+                            FileSize = fileInfo.Size,
+                            TransferTimeMs = success ? sw.ElapsedMilliseconds : -1,
+                            EncryptionTimeMs = encTime
+                        });
 
                         processedFiles++;
                         processedSize += fileInfo.Size;
