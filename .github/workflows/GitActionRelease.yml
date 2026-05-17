@@ -3,7 +3,7 @@ name: GitActionRelease
 on:
   push:
     tags:
-      - 'v*' # Triggers when a tag is pushed like "v1.0.0"
+    - 'v*' # Triggers when a tag is pushed like "v1.0.0"
 
 permissions:
   contents: write
@@ -13,28 +13,38 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        targetos: [win-x64] 
-    
+        targetos: [win-x64]
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
 
-      - name: Publish app
-        # This compiles a standalone version of the app so users don't need .NET installed
-        run: dotnet publish ProSoft.sln -c Release -r ${{ matrix.targetos }} --self-contained true -p:PublishSingleFile=true -o ./publish/${{ matrix.targetos }}
+    # 1. Publish EasySave (This embeds EasyLog.dll automatically)
+    - name: Publish ProSoft
+      run: dotnet publish ProSoft.csproj -c Release -r ${{ matrix.targetos }} --self-contained true -p:PublishSingleFile=true -o ./publish/${{ matrix.targetos }}/Bundle
 
-      - name: Zip Output
-        shell: pwsh
-        run: |
-          Compress-Archive -Path ".\publish\${{ matrix.targetos }}\*" -DestinationPath "ProSoft-${{ github.ref_name }}-${{ matrix.targetos }}.zip"
+    # 2. Publish CryptoSoft to the SAME folder
+    - name: Publish CryptoSoft
+      run: dotnet publish CryptoSoft/CryptoSoft.csproj -c Release -r ${{ matrix.targetos }} --self-contained true -p:PublishSingleFile=true -o ./publish/${{ matrix.targetos }}/Bundle
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          # Automatically attaches the zipped executable to the release page
-          files: ProSoft-${{ github.ref_name }}-${{ matrix.targetos }}.zip
+    # 3. Publish EasyLogServer to the SAME folder
+    - name: Publish EasyLogServer
+      run: dotnet publish EasyLogServer/EasyLogServer.csproj -c Release -r ${{ matrix.targetos }} --self-contained true -p:PublishSingleFile=true -o ./publish/${{ matrix.targetos }}/Bundle
+
+    # 4. Zip the entire bundle together
+    - name: Zip Output
+      shell: pwsh
+      run: |
+        Compress-Archive -Path ".\publish\${{ matrix.targetos }}\Bundle\*" -DestinationPath "EasySave-Suite-${{ github.ref_name }}-${{ matrix.targetos }}.zip"
+
+    # 5. Upload the single package to GitHub Releases
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          EasySave-Suite-${{ github.ref_name }}-${{ matrix.targetos }}.zip
