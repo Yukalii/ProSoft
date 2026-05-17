@@ -51,6 +51,11 @@ namespace EasySave
             var storage = new LocalStorage();
             var businessSoftware = new BusinessSoftwareManager(configManager);
 
+            configManager.Config.StatusFilePath = Path.GetFullPath(
+                Path.Combine(baseDir, configManager.Config.StatusFilePath));
+            configManager.Config.LogDirectory = Path.GetFullPath(
+                Path.Combine(baseDir, configManager.Config.LogDirectory));
+
             var jobManager = new BackupJobManager(
                 Path.Combine(baseDir, "jobs.json"),
                 storage,

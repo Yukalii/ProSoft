@@ -83,7 +83,7 @@ public class BackupJobManager
                 list.Add(observer);
         }
     }
-    
+
     public void RegisterObserver(IBackupObserver observer)
     {
         lock (_observers)
@@ -110,6 +110,8 @@ public class BackupJobManager
             _controlTokens[name] = controlToken;
         }
 
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
         _ = Task.Run(async () =>
         {
             try
@@ -123,7 +125,10 @@ public class BackupJobManager
 
                 var job = Jobs.Find(j => j.Name == name);
                 if (job == null)
+                {
+                    tcs.SetResult();
                     return;
+                }
 
                 var storage = new LocalStorage();
 
@@ -150,10 +155,10 @@ public class BackupJobManager
                     _priorityGate
                 );
 
-            var statusTracker = new StatusTracker(statusFile);
+                var statusTracker = new StatusTracker(statusFile);
 
-            foreach (var obs in _observers)
-                jobInstance.AttachObserver(obs);
+                foreach (var obs in _observers)
+                    jobInstance.AttachObserver(obs);
 
                 lock (_jobObservers)
                     if (_jobObservers.TryGetValue(name, out var dedicated))
@@ -171,9 +176,16 @@ public class BackupJobManager
                 }
 
                 await task;
+                tcs.SetResult();
             }
-            catch (OperationCanceledException) { }
-            catch (Exception ex) { Debug.WriteLine($"Error in {name}: {ex.Message}"); }
+            catch (OperationCanceledException)
+            {
+                tcs.SetResult();
+            }
+            catch (Exception ex)
+            {
+                tcs.SetException(ex);
+            }
             finally
             {
                 lock (_waitingJobs)
@@ -195,7 +207,8 @@ public class BackupJobManager
                 }
             }
         });
-        await Task.CompletedTask;
+
+        await tcs.Task;
     }
 
 
@@ -266,12 +279,12 @@ public class BackupJobManager
         var strategy = CreateStrategy(strategyType);
 
         var job = new BackupJob(
-            name, 
-            source, 
-            target, 
-            strategy, 
-            _sharedStorage, 
-            _sharedLogger, 
+            name,
+            source,
+            target,
+            strategy,
+            _sharedStorage,
+            _sharedLogger,
             _config,
             _largeFileSemaphore,
             LargeFileThresholdKb,
@@ -305,15 +318,15 @@ public class BackupJobManager
                    ?? new List<BackupJobDTO>();
 
         Jobs = jobDtos.Select(dto => new BackupJob(
-            dto.Name, 
-            dto.SourcePath, 
+            dto.Name,
+            dto.SourcePath,
             dto.TargetPath,
             CreateStrategy(dto.StrategyType),
-            _sharedStorage, 
-            _sharedLogger, 
-            _config, 
-            _largeFileSemaphore, 
-            LargeFileThresholdKb, 
+            _sharedStorage,
+            _sharedLogger,
+            _config,
+            _largeFileSemaphore,
+            LargeFileThresholdKb,
             _businessSoftware)).ToList();
     }
 
