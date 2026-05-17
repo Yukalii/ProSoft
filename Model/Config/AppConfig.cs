@@ -47,7 +47,7 @@ namespace EasySave.Model.Config
                 CryptoSoftKey = "secretKey",
                 EncryptedExtensions = [".pdf", ".txt", ".png"],
                 LogStorageMode = LogStorageMode.LocalOnly,
-                LogServerUrl = "http://localhost:8080"
+                LogServerUrl = "http://localhost:8080",
                 PriorityExtensions = []
             };
         }

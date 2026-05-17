@@ -4,3 +4,5 @@ CryptoSoft/bin/
 obj/
 CryptoSoft/obj/
 config.json
+central_logs/
+Properties/
