@@ -1,6 +1,5 @@
 using EasySave.Model.Config;
 using EasySave.Localisation;
-using EasySave.Model.Logger;
 
 namespace EasySave.ViewModel
 {
@@ -9,11 +8,15 @@ namespace EasySave.ViewModel
         private readonly ConfigManager _configManager;
         private readonly LocalisationService _localisation;
         private readonly DynamicLogger _dynamicLogger;
-
+        private readonly int _largeFileThresholdKb;
+        
         public List<string> Languages { get; } = new List<string> { "en", "fr" };
         public List<string> LogFormats { get; } = new List<string> { "json", "xml" };
 
         public ObservableCollection<string> EncryptedExtensions { get; }
+        public ObservableCollection<string> PriorityExtensions { get; }
+
+        public List<string> LogStorageModes { get; } = Enum.GetNames<LogStorageMode>().ToList();
 
         public string SelectedLanguage
         {
@@ -32,6 +35,16 @@ namespace EasySave.ViewModel
             {
                 _configManager.Config.LogFormat = value;
                 OnPropertyChanged();
+            }
+        }
+
+        public int LargeFileThresholdKb
+        {
+            get => _configManager.Config.LargeFileThresholdKb;
+            set
+            {
+                _configManager.Config.LargeFileThresholdKb = value;
+                OnPropertyChanged(); ; 
             }
         }
 
@@ -66,9 +79,42 @@ namespace EasySave.ViewModel
             }
         }
 
+        public string SelectedLogStorageMode
+        {
+            get => _configManager.Config.LogStorageMode.ToString();
+            set
+            {
+                if (Enum.TryParse<LogStorageMode>(value, out var mode))
+                {
+                    _configManager.Config.LogStorageMode = mode;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string LogServerUrl
+        {
+            get => _configManager.Config.LogServerUrl;
+            set { _configManager.Config.LogServerUrl = value; OnPropertyChanged(); }
+        }
+
+
+        private string _newPriorityExtension = string.Empty;
+        public string NewPriorityExtension
+        {
+            get => _newPriorityExtension;
+            set
+            {
+                _newPriorityExtension = value;
+                OnPropertyChanged();
+            }
+        }
+
         public ICommand SaveCommand { get; }
         public ICommand AddExtensionCommand { get; }
         public ICommand RemoveExtensionCommand { get; }
+        public ICommand AddPriorityExtensionCommand { get; }
+        public ICommand RemovePriorityExtensionCommand { get; }
 
         public SettingsViewModel(
             LocalisationService localisation,
@@ -78,6 +124,7 @@ namespace EasySave.ViewModel
             _localisation = localisation;
             _configManager = configManager;
             _dynamicLogger = dynamicLogger;
+            _largeFileThresholdKb = configManager.Config.LargeFileThresholdKb;
 
             EncryptedExtensions = new ObservableCollection<string>(
                                        configManager.Config.EncryptedExtensions);
@@ -90,6 +137,16 @@ namespace EasySave.ViewModel
 
             RemoveExtensionCommand = new RelayCommand(
                 ext => RemoveExtension(ext as string));
+
+            PriorityExtensions = new ObservableCollection<string>(
+                configManager.Config.PriorityExtensions);
+
+            AddPriorityExtensionCommand = new RelayCommand(
+                _ => AddPriorityExtension(),
+                _ => !string.IsNullOrWhiteSpace(NewPriorityExtension));
+
+            RemovePriorityExtensionCommand = new RelayCommand(
+                ext => RemovePriorityExtension(ext as string));
         }
 
         private void AddExtension()
@@ -109,17 +166,37 @@ namespace EasySave.ViewModel
                 EncryptedExtensions.Remove(ext);
         }
 
+        private void AddPriorityExtension()
+        {
+            string ext = NewPriorityExtension.Trim();
+            if (!ext.StartsWith('.')) ext = "." + ext;
+
+            if (!PriorityExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
+                PriorityExtensions.Add(ext.ToLowerInvariant());
+
+            NewPriorityExtension = string.Empty;
+        }
+
+        private void RemovePriorityExtension(string? ext)
+        {
+            if (ext != null)
+                PriorityExtensions.Remove(ext);
+        }
+
         public void SaveSettings()
         {
             _configManager.Config.EncryptedExtensions = EncryptedExtensions.ToList();
+            _configManager.Config.PriorityExtensions = PriorityExtensions.ToList();
+            _configManager.Config.LargeFileThresholdKb = LargeFileThresholdKb;
             _configManager.Save();
 
             _localisation.LoadLanguage(_configManager.Config.Language);
 
-            ILogger newLogger = LoggerFactory.Resolve(
+            ILogger newLogger = LoggerFactory.ResolveComposite(
                 _configManager.Config.LogFormat,
-                _configManager.Config.LogDirectory);
-            _dynamicLogger.SwapLogger(newLogger);
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _configManager.Config.LogDirectory),
+            _configManager.Config.LogServerUrl,
+            () => _configManager.Config.LogStorageMode);
         }
     }
 }

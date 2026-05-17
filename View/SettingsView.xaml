@@ -11,6 +11,11 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="170"/>
@@ -38,27 +43,53 @@
                    Margin="0,0,0,20"/>
 
         <TextBlock Grid.Row="3" Grid.Column="0"
+                   Text="{Binding DataContext.Loc[settings_log_storage_mode], RelativeSource={RelativeSource AncestorType=Window}}"
+                   VerticalAlignment="Center" Margin="0,0,0,12"/>
+        <ComboBox  Grid.Row="3" Grid.Column="1"
+                   ItemsSource="{Binding LogStorageModes}"
+                   SelectedItem="{Binding SelectedLogStorageMode}"
+                   Margin="0,0,0,12"/>
+
+        <TextBlock Grid.Row="4" Grid.Column="0"
+                   Text="{Binding DataContext.Loc[settings_log_server_url], RelativeSource={RelativeSource AncestorType=Window}}"
+                   VerticalAlignment="Center" Margin="0,0,0,20"/>
+        <TextBox   Grid.Row="4" Grid.Column="1"
+                   Text="{Binding LogServerUrl, UpdateSourceTrigger=PropertyChanged}"
+                   Padding="4,3" Margin="0,0,0,20"/>
+
+
+        <TextBlock Grid.Row="5" Grid.Column="0"
+           Text="{Binding DataContext.Loc[settings_largefilelimit], RelativeSource={RelativeSource AncestorType=Window}}"
+           VerticalAlignment="Center" Margin="0,0,0,20"/>
+
+        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,20">
+            <TextBox Width="80"
+             Text="{Binding LargeFileThresholdKb, UpdateSourceTrigger=PropertyChanged}"/>
+            <TextBlock Text="KB" VerticalAlignment="Center" Margin="8,0,0,0"/>
+        </StackPanel>
+
+        <TextBlock Grid.Row="6" Grid.Column="0"
                    Text="{Binding DataContext.Loc[settings_businessapp], RelativeSource={RelativeSource AncestorType=Window}}"
                    VerticalAlignment="Center" Margin="0,0,0,20"/>
-        <TextBox Grid.Row="3" Grid.Column="1"
+        <TextBox Grid.Row="6" Grid.Column="1"
                    Text="{Binding BusinessApp, UpdateSourceTrigger=PropertyChanged}"
                    VerticalAlignment="Center"
                    Margin="0,0,0,20"/>
 
-        <TextBlock Grid.Row="4" Grid.Column="0"
+        <TextBlock Grid.Row="7" Grid.Column="0"
                    Text="{Binding DataContext.Loc[settings_cryptokey],
                           RelativeSource={RelativeSource AncestorType=Window}}"
                    VerticalAlignment="Center" Margin="0,0,0,12"/>
-        <TextBox   Grid.Row="4" Grid.Column="1"
+        <TextBox   Grid.Row="7" Grid.Column="1"
                    Text="{Binding CryptoSoftKey, UpdateSourceTrigger=PropertyChanged}"
                    Padding="4,3" Margin="0,0,0,12"/>
 
-        <TextBlock Grid.Row="5" Grid.Column="0"
+        <TextBlock Grid.Row="8" Grid.Column="0"
                    Text="{Binding DataContext.Loc[settings_extensions],
                           RelativeSource={RelativeSource AncestorType=Window}}"
                    VerticalAlignment="Top" Margin="0,4,0,0"/>
 
-        <ListBox Grid.Row="5" Grid.Column="1"
+        <ListBox Grid.Row="8" Grid.Column="1"
                  ItemsSource="{Binding EncryptedExtensions}"
                  MaxHeight="130" Margin="0,0,0,8"
                  BorderThickness="1" BorderBrush="#CCCCCC"
@@ -92,7 +123,7 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <Grid Grid.Row="6" Grid.Column="1" Margin="0,0,0,20">
+        <Grid Grid.Row="9" Grid.Column="1" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -131,7 +162,69 @@
                     Padding="10,4"/>
         </Grid>
 
-        <Button Grid.Row="7" Grid.ColumnSpan="2"
+        <TextBlock Grid.Row="10" Grid.Column="0"
+           Text="{Binding DataContext.Loc[settings_priority_extensions],
+                  RelativeSource={RelativeSource AncestorType=Window}}"
+           VerticalAlignment="Top" Margin="0,4,0,0"/>
+
+        <ListBox Grid.Row="10" Grid.Column="1"
+         ItemsSource="{Binding PriorityExtensions}"
+         MaxHeight="130" Margin="0,0,0,8"
+         BorderThickness="1" BorderBrush="#CCCCCC"
+         HorizontalContentAlignment="Stretch">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding}"
+                           VerticalAlignment="Center" Margin="4,0,0,0"/>
+                        <Button Grid.Column="1" Content="X"
+                        Command="{Binding DataContext.RemovePriorityExtensionCommand,
+                                  RelativeSource={RelativeSource AncestorType=ListBox}}"
+                        CommandParameter="{Binding}"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="#CC0000" Cursor="Hand" Padding="6,2" FontSize="11"/>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <Grid Grid.Row="11" Grid.Column="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0" MinWidth="150" Margin="0,0,8,0">
+                <TextBox Text="{Binding NewPriorityExtension, UpdateSourceTrigger=PropertyChanged}"
+                 Padding="4,3"/>
+                <TextBlock Text=".docx" Foreground="Gray" Margin="6,0,0,0"
+                   VerticalAlignment="Center" IsHitTestVisible="False" Padding="0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding NewPriorityExtension}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding NewPriorityExtension}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+            <Button Grid.Column="1"
+            Content="{Binding DataContext.Loc[settings_add_extension],
+                      RelativeSource={RelativeSource AncestorType=Window}}"
+            Command="{Binding AddPriorityExtensionCommand}"
+            Padding="10,4"/>
+        </Grid>
+
+        <Button Grid.Row="12" Grid.ColumnSpan="2"
                 Content="{Binding DataContext.Loc[settings_save], RelativeSource={RelativeSource AncestorType=Window}}"
                 Command="{Binding SaveCommand}"
                 HorizontalAlignment="Left" Padding="12,6"/>

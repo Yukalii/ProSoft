@@ -1,4 +1,6 @@
-namespace EasySave.Model.Logger
+using System.Xml.Serialization;
+
+namespace EasyLog
 {
     [XmlRoot("LogEntry")]
     public class LogEntry
@@ -10,5 +12,7 @@ namespace EasySave.Model.Logger
         public long FileSize { get; set; }
         public long TransferTimeMs { get; set; }
         public int EncryptionTimeMs { get; set; }
+        public string MachineName { get; set; } = Environment.MachineName;
+        public string UserName { get; set; } = Environment.UserName;
     }
 }

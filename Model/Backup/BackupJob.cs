@@ -1,5 +1,5 @@
-﻿using EasySave.Model.Config;
-using EasySave.Model.Logger;
+﻿using EasySave.Model.BusinessSoftware;
+using EasySave.Model.Config;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 using EasySave.Model.Strategies;
@@ -19,10 +19,14 @@ namespace EasySave.Model.Backup
         public string StrategyName => Strategy.GetType().Name;
         public IBackupStrategy Strategy { get; }
 
+        private readonly SemaphoreSlim _largeFileSemaphore;
+        private readonly int _largeFileThresholdKb;
         private readonly IStorage _storage;
         private readonly ILogger _logger;
         private readonly List<IBackupObserver> _observers;
         private readonly AppConfig _config;
+        private readonly IBusinessSoftwareManager _businessSoftware;
+        private readonly PriorityGate? _priorityGate;
 
         public BackupJob(
             string name,
@@ -31,7 +35,12 @@ namespace EasySave.Model.Backup
             IBackupStrategy strategy,
             IStorage storage,
             ILogger logger,
-            AppConfig config)
+            AppConfig config,
+            SemaphoreSlim largeFileSemaphore,
+            int largeFileThresholdKb,
+            IBusinessSoftwareManager businessSoftware,
+            PriorityGate? priorityGate = null)
+
         {
             Name = name;
             SourcePath = sourcePath;
@@ -40,7 +49,11 @@ namespace EasySave.Model.Backup
             _storage = storage;
             _logger = logger;
             _observers = new List<IBackupObserver>();
-            _config = config;
+            _config = config; 
+            _largeFileSemaphore = largeFileSemaphore;
+            _largeFileThresholdKb = largeFileThresholdKb;
+            _businessSoftware = businessSoftware;
+            _priorityGate = priorityGate;
         }
 
         /// <summary>
@@ -72,18 +85,25 @@ namespace EasySave.Model.Backup
         /// <summary>
         /// Executes the backup job using the selected strategy.
         /// </summary>
-        public void Execute()
+        public Task ExecuteAsync() => Strategy.ExecuteAsync(BuildContext(null));
+        public Task ExecuteAsync(JobControlToken controlToken)
+            => Strategy.ExecuteAsync(BuildContext(controlToken));
+
+        private BackupJobContext BuildContext(JobControlToken? controlToken)
         {
-            var context = new BackupJobContext(
+            return new BackupJobContext(
                 Name,
                 SourcePath,
                 TargetPath,
                 _storage,
                 _logger,
                 _observers,
-                _config);
-
-            Strategy.Execute(context);
+                _config,
+                _largeFileSemaphore,
+                _largeFileThresholdKb,
+                controlToken,
+                _businessSoftware,
+                _priorityGate);
         }
     }
 }

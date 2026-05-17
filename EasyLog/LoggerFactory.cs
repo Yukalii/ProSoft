@@ -1,4 +1,4 @@
-﻿namespace EasySave.Model.Logger
+﻿namespace EasyLog
 {
     public static class LoggerFactory
     {
@@ -10,6 +10,16 @@
                 "xml" => new XmlLogger(logDirectory),
                 _ => throw new NotSupportedException($"Log format not supported: {format}")
             };
+        }
+        public static ILogger ResolveComposite(
+            string format,
+            string logDirectory,
+            string serverUrl,
+            Func<LogStorageMode> getMode)
+        {
+            ILogger local = Resolve(format, logDirectory);
+            ILogger central = new ApiLogger(serverUrl);
+            return new CompositeLogger(local, central, getMode);
         }
     }
 }
