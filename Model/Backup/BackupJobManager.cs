@@ -1,7 +1,6 @@
 ﻿using EasySave.Model.Backup;
 using EasySave.Model.BusinessSoftware;
 using EasySave.Model.Config;
-using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 using EasySave.Model.Strategies;
@@ -127,7 +126,6 @@ public class BackupJobManager
                     return;
 
                 var storage = new LocalStorage();
-                var logger = new JsonLogger(_config.LogDirectory);
 
                 // Create a unique status file for this job
                 string statusFile = Path.Combine(
@@ -144,7 +142,7 @@ public class BackupJobManager
                     job.TargetPath,
                     strategy,
                     storage,
-                    logger,
+                    _sharedLogger,
                     _config,
                     _largeFileSemaphore,
                     LargeFileThresholdKb,

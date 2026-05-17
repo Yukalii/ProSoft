@@ -1,6 +1,5 @@
 ﻿using EasySave.Model.BusinessSoftware;
 using EasySave.Model.Config;
-using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 using EasySave.Model.Storage;
 

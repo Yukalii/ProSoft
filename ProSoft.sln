@@ -1,11 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.37111.16 d17.14
+VisualStudioVersion = 17.14.37111.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProSoft", "ProSoft.csproj", "{6DF7E2CF-82BC-D406-F8A5-6AD597EF5BE4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoSoft", "CryptoSoft\CryptoSoft.csproj", "{F17AC4F9-E834-354E-B694-7C47867E9A79}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyLog", "EasyLog\EasyLog.csproj", "{3CD16E21-072A-42E7-80BF-2431AC47A9AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyLogServer", "EasyLogServer\EasyLogServer.csproj", "{B5E86AF6-1E4C-4A93-8069-70E5AE5C6A0F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +25,14 @@ Global
 		{F17AC4F9-E834-354E-B694-7C47867E9A79}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F17AC4F9-E834-354E-B694-7C47867E9A79}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F17AC4F9-E834-354E-B694-7C47867E9A79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3CD16E21-072A-42E7-80BF-2431AC47A9AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CD16E21-072A-42E7-80BF-2431AC47A9AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3CD16E21-072A-42E7-80BF-2431AC47A9AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3CD16E21-072A-42E7-80BF-2431AC47A9AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B5E86AF6-1E4C-4A93-8069-70E5AE5C6A0F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B5E86AF6-1E4C-4A93-8069-70E5AE5C6A0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B5E86AF6-1E4C-4A93-8069-70E5AE5C6A0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B5E86AF6-1E4C-4A93-8069-70E5AE5C6A0F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

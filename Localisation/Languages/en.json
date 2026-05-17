@@ -55,7 +55,9 @@
   "settings_cryptokey": "Encryption key :",
   "settings_extensions": "Encrypted extensions :",
   "settings_add_extension": "➕ Add",
+  "settings_save": "💾 Save",
+  "settings_log_storage_mode": "Log storage mode :",
+  "settings_log_server_url":   "Log server URL :"
   "settings_priority_extensions": "Priority extensions :",
-  "settings_largefilelimit": "Large file limit :",
-  "settings_save": "💾 Save"
+  "settings_largefilelimit": "Large file limit :"
 }

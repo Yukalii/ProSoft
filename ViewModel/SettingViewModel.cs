@@ -1,6 +1,5 @@
 using EasySave.Model.Config;
 using EasySave.Localisation;
-using EasySave.Model.Logger;
 
 namespace EasySave.ViewModel
 {
@@ -16,6 +15,8 @@ namespace EasySave.ViewModel
 
         public ObservableCollection<string> EncryptedExtensions { get; }
         public ObservableCollection<string> PriorityExtensions { get; }
+
+        public List<string> LogStorageModes { get; } = Enum.GetNames<LogStorageMode>().ToList();
 
         public string SelectedLanguage
         {
@@ -77,6 +78,26 @@ namespace EasySave.ViewModel
                 OnPropertyChanged();
             }
         }
+
+        public string SelectedLogStorageMode
+        {
+            get => _configManager.Config.LogStorageMode.ToString();
+            set
+            {
+                if (Enum.TryParse<LogStorageMode>(value, out var mode))
+                {
+                    _configManager.Config.LogStorageMode = mode;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string LogServerUrl
+        {
+            get => _configManager.Config.LogServerUrl;
+            set { _configManager.Config.LogServerUrl = value; OnPropertyChanged(); }
+        }
+
 
         private string _newPriorityExtension = string.Empty;
         public string NewPriorityExtension
@@ -171,10 +192,11 @@ namespace EasySave.ViewModel
 
             _localisation.LoadLanguage(_configManager.Config.Language);
 
-            ILogger newLogger = LoggerFactory.Resolve(
+            ILogger newLogger = LoggerFactory.ResolveComposite(
                 _configManager.Config.LogFormat,
-                _configManager.Config.LogDirectory);
-            _dynamicLogger.SwapLogger(newLogger);
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _configManager.Config.LogDirectory),
+            _configManager.Config.LogServerUrl,
+            () => _configManager.Config.LogStorageMode);
         }
     }
 }

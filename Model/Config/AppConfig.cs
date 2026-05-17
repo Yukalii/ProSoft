@@ -20,6 +20,18 @@ namespace EasySave.Model.Config
         public string BusinessApp { get; set; } = "CalculatorApp";
 
         /// <summary>
+        /// Where log entries should be stored.
+        /// Defaults to LocalOnly so existing deployments are unaffected.
+        /// </summary>
+        public LogStorageMode LogStorageMode { get; set; } = LogStorageMode.LocalOnly;
+
+        /// <summary>
+        /// Base URL of the Docker log server.
+        /// Used when LogStorageMode is CentralizedOnly or Both.
+        /// </summary>
+        public string LogServerUrl { get; set; } = "http://localhost:8080";
+
+        /// <summary>
         /// Creates a default configuration used when no config file exists.
         /// </summary>
         public static AppConfig CreateDefault()
@@ -34,6 +46,8 @@ namespace EasySave.Model.Config
                 CryptoSoftPath = "CryptoSoft.exe",
                 CryptoSoftKey = "secretKey",
                 EncryptedExtensions = [".pdf", ".txt", ".png"],
+                LogStorageMode = LogStorageMode.LocalOnly,
+                LogServerUrl = "http://localhost:8080"
                 PriorityExtensions = []
             };
         }

@@ -55,7 +55,9 @@
   "settings_cryptokey": "Clé de chiffrement :",
   "settings_extensions": "Extensions chiffrées :",
   "settings_add_extension": "➕ Ajouter",
+  "settings_save": "💾 Sauvegarder",
+  "settings_log_storage_mode": "Mode de stockage des logs :",
+  "settings_log_server_url":   "URL du serveur de logs :"
   "settings_priority_extensions": "Extensions prioritaires :",
-  "settings_largefilelimit": "Limite grand fichier :",
-  "settings_save": "💾 Sauvegarder"
+  "settings_largefilelimit": "Limite grand fichier :"
 }
