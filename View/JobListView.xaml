@@ -28,13 +28,13 @@
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
                     <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_name], RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Width="200" DisplayMemberBinding="{Binding Job.Name}"/>
+                                    Width="160" DisplayMemberBinding="{Binding Job.Name}"/>
                     <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_source], RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Width="220" DisplayMemberBinding="{Binding Job.SourcePath}"/>
+                                    Width="Auto" DisplayMemberBinding="{Binding Job.SourcePath}"/>
                     <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_target], RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Width="220" DisplayMemberBinding="{Binding Job.TargetPath}"/>
+                                    Width="Auto" DisplayMemberBinding="{Binding Job.TargetPath}"/>
                     <GridViewColumn Header="{Binding DataContext.Loc[jobs_col_strategy], RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Width="180" DisplayMemberBinding="{Binding Job.StrategyName}"/>
+                                    Width="140" DisplayMemberBinding="{Binding Job.StrategyName}"/>
                 </GridView>
             </ListView.View>
         </ListView>
