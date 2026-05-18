@@ -14,9 +14,12 @@ app.MapPost("/api/logs", async (HttpContext context) =>
     if (string.IsNullOrWhiteSpace(logEntry))
         return Results.BadRequest(new { error = "Empty log entry" });
 
+    string contentType = context.Request.ContentType ?? "application/json";
+    string extension = contentType.Contains("xml") ? "xml" : "json";
+
     // One file per day regardless of number of users or machines
     var date = DateTime.Now.ToString("yyyy-MM-dd");
-    var filePath = Path.Combine(logDir, $"log_{date}.json");
+    var filePath = Path.Combine(logDir, $"log_{date}.{extension}");
 
     // Append the raw JSON line — MachineName and UserName are inside the payload
     await File.AppendAllTextAsync(filePath, logEntry + Environment.NewLine);

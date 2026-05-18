@@ -44,7 +44,8 @@ namespace EasySave
                 configManager.Config.LogFormat,
                 Path.Combine(baseDir, configManager.Config.LogDirectory),
                 configManager.Config.LogServerUrl,
-                () => configManager.Config.LogStorageMode
+                () => configManager.Config.LogStorageMode,
+                () => configManager.Config.LogFormat
             );
             var dynamicLogger = new DynamicLogger(baseLogger);
 
