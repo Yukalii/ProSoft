@@ -53,6 +53,15 @@ namespace EasySave.Localisation
         public const string ProcessedSize = "ProcessedSize";
         public const string CurrentFile = "CurrentFile";
 
+        // Global execution view
+        public const string ExecSectionProgressGlobal = "ExecSectionProgressGlobal";
+        public const string ExecGlobalFiles = "ExecGlobalFiles";
+        public const string ExecSectionRunningJobs = "ExecSectionRunningJobs";
+
+        // Per-job accordion details
+        public const string ExecPercentage = "ExecPercentage";
+        public const string ExecCurrentFile = "ExecCurrentFile";
+
         // Formats
         public const string LogFormat = "LogFormat";
         public const string LogFormatJson = "LogFormatJson";

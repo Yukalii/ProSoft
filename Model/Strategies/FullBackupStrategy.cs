@@ -1,107 +1,145 @@
 ﻿using EasySave.Model.Backup;
 using EasySave.Model.Encryption;
-using EasySave.Model.Logger;
 using EasySave.Model.Observers;
 
 namespace EasySave.Model.Strategies
 {
     /// <summary>
-    /// Implements a full backup strategy.
-    /// Copies all files from the source directory to the target directory,
-    /// logs each action, and notifies observers of real-time progress.
+    /// Full backup strategy with concurrency control:
+    /// Only one large file (> threshold KB) may be processed at a time.
     /// </summary>
     public class FullBackupStrategy : IBackupStrategy
     {
-        public void Execute(BackupJobContext context)
+        public async Task ExecuteAsync(BackupJobContext context)
         {
-            var storage = context.Storage;
-            var logger = context.Logger;
-            var observers = context.Observers;
+            var allFiles = context.Storage.EnumerateFiles(context.SourcePath).ToList();
+            var priorityExts = context.Config.PriorityExtensions.Select(e => e.ToLowerInvariant()).ToHashSet();
+            var priorityFiles = allFiles.Where(f => priorityExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
+            var normalFiles = allFiles.Where(f => !priorityExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
 
-            var allFiles = storage.EnumerateFiles(context.SourcePath);
-            long totalSize = 0;
-            int totalFiles = 0;
+            // Register priority count in the shared gate BEFORE iterating
+            context.PriorityGate?.AddPendingPriority(priorityFiles.Count);
 
-            foreach (var file in allFiles)
-            {
-                var info = storage.GetFileInfo(file);
-                totalSize += info.Size;
-                totalFiles++;
-            }
+            // Process priority files first, then normal files
+            var orderedFiles = priorityFiles.Concat(normalFiles).ToList();
 
+            long totalSize = allFiles.Sum(f => context.Storage.GetFileInfo(f).Size);
+            int totalFiles = allFiles.Count;
             long processedSize = 0;
             int processedFiles = 0;
 
-            foreach (var sourceFile in storage.EnumerateFiles(context.SourcePath))
+            bool isPriority = false; // tracks which half we are in
+
+            try
             {
-                string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
-                string destinationFile = Path.Combine(context.TargetPath, relativePath);
-
-                Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
-
-                var fileInfo = storage.GetFileInfo(sourceFile);
-
-                var stopwatch = Stopwatch.StartNew();
-                bool success = storage.CopyFile(sourceFile, destinationFile);
-                stopwatch.Stop();
-
-                long transferTime = success ? stopwatch.ElapsedMilliseconds : -1;
-
-                // Encrypt backup if needed
-                int encryptionTime = 0;
-                if (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                foreach (var sourceFile in orderedFiles)
                 {
-                    encryptionTime = CryptoSoftInvoker.EncryptFile(destinationFile, context.Config);
+                    isPriority = priorityExts.Contains(
+                        Path.GetExtension(sourceFile).ToLowerInvariant());
+
+                    context.ControlToken?.WaitIfPaused();
+
+                    // Gate: block non-priority file while any job has priority pending
+                    if (!isPriority && context.PriorityGate != null)
+                    {
+                        await context.PriorityGate.WaitForClearanceAsync(context.ControlToken?.Token ?? CancellationToken.None);
+                    }
+
+                    if (context.BusinessSoftware != null)
+                    {
+                        while (context.BusinessSoftware.SoftwareIsRunning())
+                        {
+                            context.ControlToken?.Token.ThrowIfCancellationRequested();
+
+                            Notify(context.Observers, new StatusSnapshot(
+                                context.JobName, DateTime.Now, "Waiting",
+                                totalFiles, totalSize, processedFiles, processedSize,
+                                sourceFile, "Waiting for business software to close..."));
+
+                            await Task.Delay(1000);
+                        }
+                    }
+                    context.ControlToken?.Token.ThrowIfCancellationRequested();
+
+                    string relativePath = Path.GetRelativePath(context.SourcePath, sourceFile);
+                    string destinationFile = Path.Combine(context.TargetPath, relativePath);
+                    Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
+
+                    var fileInfo = context.Storage.GetFileInfo(sourceFile);
+                    bool isLarge = fileInfo.Size > (context.LargeFileThresholdKb * 1024);
+
+                    // Debug.WriteLine($"File size: {fileInfo.Size} bytes, threshold: {context.LargeFileThresholdKb * 1024}");      // Defense test
+                    if (isLarge)
+                    {
+                        // Debug.WriteLine($"[WAIT] Large file detected ({sourceFile}). Waiting for semaphore...");      // Defense test
+                        await context.LargeFileSemaphore.WaitAsync(context.ControlToken?.Token ?? CancellationToken.None);
+                        // Debug.WriteLine($"[ENTER] Semaphore acquired for large file: {sourceFile}");      // Defense test
+                    }
+
+                    try
+                    {
+                        var sw = Stopwatch.StartNew();
+                        bool success = context.Storage.CopyFile(sourceFile, destinationFile,
+                            context.ControlToken);
+                        sw.Stop();
+
+                        int encTime = (success && CryptoSoftInvoker.ShouldEncrypt(sourceFile, context.Config))
+                            ? CryptoSoftInvoker.EncryptFile(destinationFile, context.Config) : 0;
+
+                        context.Logger.LogEntry(new LogEntry {
+                            Timestamp = DateTime.Now,
+                            JobName = context.JobName,
+                            SourcePath = sourceFile,
+                            DestinationPath = destinationFile,
+                            FileSize = fileInfo.Size,
+                            TransferTimeMs = success ? sw.ElapsedMilliseconds : -1,
+                            EncryptionTimeMs = encTime
+                        });
+
+                        processedFiles++;
+                        processedSize += fileInfo.Size;
+
+                        Notify(context.Observers, new StatusSnapshot(
+                            context.JobName, DateTime.Now, "Active",
+                            totalFiles, totalSize, processedFiles, processedSize,
+                            sourceFile, destinationFile));
+                    }
+                    finally
+                    {
+                        if (isLarge)
+                        {
+                            context.LargeFileSemaphore.Release();
+                            // Debug.WriteLine($"[EXIT] Semaphore released for large file: {sourceFile}");      // Defense test
+                        }
+                        if (isPriority)
+                            context.PriorityGate?.OnePriorityDone();
+                    }
                 }
 
-                // Log the action
-                logger.LogEntry(new LogEntry
-                {
-                    Timestamp = DateTime.Now,
-                    JobName = context.JobName,
-                    SourcePath = sourceFile,
-                    DestinationPath = destinationFile,
-                    FileSize = fileInfo.Size,
-                    TransferTimeMs = transferTime,
-                    EncryptionTimeMs = encryptionTime
-                });
-
-                // Update progress
-                processedFiles++;
-                processedSize += fileInfo.Size;
-
-                // Notify observers
-                var snapshot = new StatusSnapshot(
-                    context.JobName,
-                    DateTime.Now,
-                    "Active",
-                    totalFiles,
-                    totalSize,
-                    processedFiles,
-                    processedSize,
-                    sourceFile,
-                    destinationFile
-                );
-
-                foreach (var obs in observers)
-                    obs.OnJobUpdated(snapshot);
+                Notify(context.Observers, new StatusSnapshot(
+                    context.JobName, DateTime.Now, "Inactive",
+                    totalFiles, totalSize, processedFiles, processedSize, null, null));
             }
+            catch (OperationCanceledException)
+            {
+                // If cancelled mid-priority-batch, drain remaining priority count
+                // so other jobs are not permanently blocked
+                int remaining = priorityFiles.Count - processedFiles; // rough estimate
+                for (int i = 0; i < Math.Max(0, remaining); i++)
+                    context.PriorityGate?.OnePriorityDone();
 
-            // Final inactive status
-            var finalSnapshot = new StatusSnapshot(
-                context.JobName,
-                DateTime.Now,
-                "Inactive",
-                totalFiles,
-                totalSize,
-                processedFiles,
-                processedSize,
-                null,
-                null
-            );
+                Notify(context.Observers, new StatusSnapshot(
+                    context.JobName, DateTime.Now, "Stopped",
+                    totalFiles, totalSize, processedFiles, processedSize, null, null));
+                throw;
+            }
+        }
 
+        private static void Notify(
+            IEnumerable<IBackupObserver> observers, StatusSnapshot snapshot)
+        {
             foreach (var obs in observers)
-                obs.OnJobUpdated(finalSnapshot);
+                obs.OnJobUpdated(snapshot);
         }
     }
 }

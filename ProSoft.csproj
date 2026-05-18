@@ -24,6 +24,8 @@
 	<!-- Prevent CryptoSoft source files from being compiled into ProSoft -->
 	<ItemGroup>
 		<Compile Remove="CryptoSoft\**\*.cs" />
+		<Compile Remove="EasyLog\**\*.cs" />
+		<Compile Remove="EasyLogServer\**\*" />
 	</ItemGroup>
 
 	<!-- Ensures CryptoSoft is built before ProSoft -->
@@ -36,6 +38,11 @@
 	</ItemGroup>
 	<ItemGroup>
 		<Folder Include="CryptoSoft\" />
+	</ItemGroup>
+
+	
+	<ItemGroup>
+		<ProjectReference Include="EasyLog\EasyLog.csproj" />
 	</ItemGroup>
 
 	<!-- After ProSoft builds, copy CryptoSoft.exe next to it -->

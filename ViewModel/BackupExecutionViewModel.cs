@@ -1,137 +1,167 @@
-using System.Windows;
-using System.Collections.ObjectModel;
-using System.Windows.Input;
 using EasySave.Model.Backup;
 using EasySave.Model.Observers;
 
 namespace EasySave.ViewModel
 {
-    public class BackupExecutionViewModel : ViewModelBase, IBackupObserver
+    public class BackupExecutionViewModel : ViewModelBase
     {
         private readonly BackupJobManager _jobManager;
+        private readonly Action _onGoBack;
+        private List<BackupJob> _lastJobs = new();
 
-        public ObservableCollection<BackupJob> AvailableJobs { get; } = new();
+        public ObservableCollection<RunningJobViewModel> RunningJobs { get; }
+            = new ObservableCollection<RunningJobViewModel>();
 
-        private string _jobName = "";
-        public string JobName
+        private int _globalTotalFiles;
+        public int GlobalTotalFiles
         {
-            get => _jobName;
-            set => SetProperty(ref _jobName, value);
+            get => _globalTotalFiles;
+            private set => SetProperty(ref _globalTotalFiles, value);
         }
 
-        private BackupJob? _selectedJob;
-        public BackupJob? SelectedJob
+        private int _globalProcessedFiles;
+        public int GlobalProcessedFiles
         {
-            get => _selectedJob;
-            set
-            {
-                SetProperty(ref _selectedJob, value);
-                _jobName = value?.Name ?? "";
-                OnPropertyChanged(nameof(JobName));
-                CommandManager.InvalidateRequerySuggested();
-            }
+            get => _globalProcessedFiles;
+            private set => SetProperty(ref _globalProcessedFiles, value);
         }
 
-        private string _runningJobName = "-";
-        public string RunningJobName
-        {
-            get => _runningJobName;
-            private set => SetProperty(ref _runningJobName, value);
-        }
+        public int GlobalTotalFilesDisplay => GlobalTotalFiles > 0 ? GlobalTotalFiles : 1;
 
-        private string _state = "Inactive";
-        public string State
-        {
-            get => _state;
-            private set => SetProperty(ref _state, value);
-        }
+        public ICommand GoBackCommand { get; }
+        public ICommand RelaunchCommand { get; }
+        public ICommand PauseSingleJobCommand { get; }
+        public ICommand PlaySingleJobCommand { get; }
+        public ICommand StopSingleJobCommand { get; }
+        public ICommand PauseAllCommand { get; }
+        public ICommand PlayAllCommand { get; }
+        public ICommand StopAllCommand { get; }
 
-        private int _totalFiles;
-        public int TotalFiles
-        {
-            get => _totalFiles;
-            private set
-            {
-                SetProperty(ref _totalFiles, value);
-                OnPropertyChanged(nameof(TotalFilesDisplay));
-            }
-        }
-
-        public int TotalFilesDisplay => TotalFiles > 0 ? TotalFiles : 1;
-
-        private long _totalSize;
-        public long TotalSize
-        {
-            get => _totalSize;
-            private set => SetProperty(ref _totalSize, value);
-        }
-
-        private int _processedFiles;
-        public int ProcessedFiles
-        {
-            get => _processedFiles;
-            private set => SetProperty(ref _processedFiles, value);
-        }
-
-        private long _processedSize;
-        public long ProcessedSize
-        {
-            get => _processedSize;
-            private set => SetProperty(ref _processedSize, value);
-        }
-
-        private string? _currentSourceFile;
-        public string? CurrentSourceFile
-        {
-            get => _currentSourceFile;
-            private set => SetProperty(ref _currentSourceFile, value);
-        }
-
-        private string? _currentDestinationFile;
-        public string? CurrentDestinationFile
-        {
-            get => _currentDestinationFile;
-            private set => SetProperty(ref _currentDestinationFile, value);
-        }
-
-        public ICommand StartJobCommand { get; }
-
-        public BackupExecutionViewModel(BackupJobManager jobManager)
+        public BackupExecutionViewModel(BackupJobManager jobManager, Action onGoBack)
         {
             _jobManager = jobManager;
-            RefreshJobs();
+            _onGoBack = onGoBack;
 
-            StartJobCommand = new RelayCommand(
-                _ => StartJob(_jobName),
-                _ => !string.IsNullOrWhiteSpace(_jobName)
+            GoBackCommand = new RelayCommand(_ => _onGoBack());
+
+            RelaunchCommand = new RelayCommand(
+                _ =>
+                {
+                    Reset();
+                    if (_lastJobs.Count == 1)
+                        StartSingleJob(_lastJobs[0].Name);
+                    else
+                        StartMultipleJobs(_lastJobs);
+                },
+                _ => _lastJobs.Count > 0
             );
-        }
 
-        public async void StartJob(string jobName)
-        {
-            RunningJobName = jobName; 
-            await Task.Run(() => _jobManager.ExecuteJob(jobName));
-        }
+            PauseSingleJobCommand = new RelayCommand(
+                jobName =>
+                {
+                    if (jobName is string name)
+                    {
+                        var vm = GetJobVm(name);
+                        if (vm == null || !vm.IsControllable) return;
+                        _jobManager.PauseJob(name);
+                        vm.SetPaused(true);
+                    }
+                });
 
-        public void RefreshJobs()
-        {
-            AvailableJobs.Clear();
-            foreach (var job in _jobManager.Jobs)
-                AvailableJobs.Add(job);
-        }
+            PlaySingleJobCommand = new RelayCommand(
+                jobName =>
+                {
+                    if (jobName is string name)
+                    {
+                        var vm = GetJobVm(name);
+                        if (vm == null || !vm.IsControllable) return;
+                        _jobManager.PlayJob(name);
+                        vm.SetPaused(false);
+                    }
+                });
 
-        public void OnJobUpdated(StatusSnapshot snapshot)
-        {
-            Application.Current.Dispatcher.Invoke(() =>
+            StopSingleJobCommand = new RelayCommand(
+                jobName =>
+                {
+                    if (jobName is string name)
+                    {
+                        var vm = GetJobVm(name);
+                        if (vm == null || !vm.IsControllable) return;
+                        _jobManager.StopJob(name);
+                        vm.SetStopped();
+                    }
+                });
+
+            PauseAllCommand = new RelayCommand(_ =>
             {
-                State = snapshot.State;
-                TotalFiles = snapshot.TotalFiles;
-                TotalSize = snapshot.TotalSize;
-                ProcessedFiles = snapshot.ProcessedFiles;
-                ProcessedSize = snapshot.ProcessedSize;
-                CurrentSourceFile = snapshot.CurrentSourceFile;
-                CurrentDestinationFile = snapshot.CurrentDestinationFile;
+                _jobManager.PauseAll();
+                foreach (var vm in RunningJobs.Where(v => v.IsControllable))
+                    vm.SetPaused(true);
+            });
+
+            PlayAllCommand = new RelayCommand(_ =>
+            {
+                _jobManager.PlayAll();
+                foreach (var vm in RunningJobs.Where(v => v.IsControllable))
+                    vm.SetPaused(false);
+            });
+
+            StopAllCommand = new RelayCommand(_ =>
+            {
+                _jobManager.StopAll();
+                foreach (var vm in RunningJobs.Where(v => v.IsControllable))
+                    vm.SetStopped();
             });
         }
+
+        public void Reset()
+        {
+            RunningJobs.Clear();
+            GlobalTotalFiles = 0;
+            GlobalProcessedFiles = 0;
+            OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
+        }
+
+        public void StartSingleJob(string jobName)
+        {
+            var job = _jobManager.Jobs.FirstOrDefault(j => j.Name == jobName);
+            if (job == null) return;
+
+            _lastJobs = new List<BackupJob> { job };
+            CommandManager.InvalidateRequerySuggested();
+
+            if (RunningJobs.Any(x => x.JobName == jobName)) return;
+
+            var vm = new RunningJobViewModel(jobName, RefreshRunningJobs);
+            RunningJobs.Add(vm);
+            _jobManager.RegisterJobObserver(jobName, vm);
+            _ = _jobManager.ExecuteJob(jobName);
+        }
+
+        public void StartMultipleJobs(IEnumerable<BackupJob> jobs)
+        {
+            _lastJobs = jobs.ToList();
+            CommandManager.InvalidateRequerySuggested();
+
+            foreach (var job in _lastJobs)
+            {
+                if (RunningJobs.Any(x => x.JobName == job.Name)) continue;
+
+                var vm = new RunningJobViewModel(job.Name, RefreshRunningJobs);
+                RunningJobs.Add(vm);
+                _jobManager.RegisterJobObserver(job.Name, vm);
+                _ = _jobManager.ExecuteJob(job.Name);
+            }
+        }
+
+        public void RefreshRunningJobs()
+        {
+            GlobalTotalFiles = RunningJobs.Sum(j => j.TotalFiles);
+            GlobalProcessedFiles = RunningJobs.Sum(j => j.ProcessedFiles);
+            OnPropertyChanged(nameof(GlobalTotalFilesDisplay));
+        }
+
+        private RunningJobViewModel? GetJobVm(string name)
+            => RunningJobs.FirstOrDefault(v => v.JobName == name);
     }
 }

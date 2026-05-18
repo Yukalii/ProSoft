@@ -1,8 +1,12 @@
-namespace EasySave.Model.Logger
+using System.Text.Json;
+
+namespace EasyLog
 {
     public class JsonLogger : ILogger
     {
         private readonly string _logDirectory;
+
+        private static readonly object _fileLock = new object();
 
         public JsonLogger(string logDirectory)
         {
@@ -21,8 +25,10 @@ namespace EasySave.Model.Logger
             {
                 WriteIndented = false
             });
-
-            File.AppendAllText(filePath, json + Environment.NewLine);
+            lock (_fileLock)
+            {
+                File.AppendAllText(filePath, json + Environment.NewLine);
+            }
         }
     }
 }
