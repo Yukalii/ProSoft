@@ -140,11 +140,11 @@ Ensures a single, consistent configuration source across the application lifetim
 
 ### Sequence Diagram
 
-> 📄 ![test](https:/github.com/Yukalii/ProSoft/tree/main/.github/images/Sequence_Diagram_Group_5_Running_Job.png)
+> 📄 ![test](https:/github.com/Yukalii/ProSoft/tree/main/.github/images/Sequence_Diagram_Group_5_RunningJob.png)
 
 ### Activity Diagram
 
-> 📄 ![](.github/images/ActivityDiagram.png)
+> 📄 ![test](https:/github.com/Yukalii/ProSoft/tree/main/.github/images/Sequence Diagram Group 5 Running Job.pdf)
 
 ### Usecase Diagram
 
