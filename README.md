@@ -117,7 +117,7 @@ Navigate to the root of the EasySave project and execute the [launch command](#h
 
 ### Class Diagram
 
-> 📄 See the attached PDF file for the full class diagram.
+> 📄 ![](.github/images/ClassDiagram.png)
 
 ### Design Patterns Used
 
@@ -140,13 +140,15 @@ Ensures a single, consistent configuration source across the application lifetim
 
 ### Sequence Diagram
 
-> 📄 See the attached PDF file for the full sequence diagram.
+> 📄 ![test](https:/github.com/Yukalii/ProSoft/tree/main/.github/images/Sequence_Diagram_Group_5_Running_Job.png)
 
-***
+### Activity Diagram
 
-## Known Limitations
+> 📄 ![](.github/images/ActivityDiagram.png)
 
-The following features are **not yet implemented** in the current version:
+### Usecase Diagram
+
+> 📄 ![](.github/images/UsecaseDiagram.png)
 
 ***
 
