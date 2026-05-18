@@ -56,46 +56,62 @@ namespace EasySave.ViewModel
                 _ => _lastJobs.Count > 0
             );
 
-            PauseSingleJobCommand = new RelayCommand(jobName =>
-            {
-                if (jobName is string name)
+            PauseSingleJobCommand = new RelayCommand(
+                jobName =>
                 {
-                    _jobManager.PauseJob(name);
-                    GetJobVm(name)?.SetPaused(true);
-                }
-            });
+                    if (jobName is string name)
+                    {
+                        var vm = GetJobVm(name);
+                        if (vm == null || !vm.IsControllable) return;
+                        _jobManager.PauseJob(name);
+                        vm.SetPaused(true);
+                    }
+                });
 
-            PlaySingleJobCommand = new RelayCommand(jobName =>
-            {
-                if (jobName is string name)
+            PlaySingleJobCommand = new RelayCommand(
+                jobName =>
                 {
-                    _jobManager.PlayJob(name);
-                    GetJobVm(name)?.SetPaused(false);
-                }
-            });
+                    if (jobName is string name)
+                    {
+                        var vm = GetJobVm(name);
+                        if (vm == null || !vm.IsControllable) return;
+                        _jobManager.PlayJob(name);
+                        vm.SetPaused(false);
+                    }
+                });
 
-            StopSingleJobCommand = new RelayCommand(jobName =>
-            {
-                if (jobName is string name)
+            StopSingleJobCommand = new RelayCommand(
+                jobName =>
                 {
-                    _jobManager.StopJob(name);
-                    GetJobVm(name)?.SetStopped();
-                }
-            });
+                    if (jobName is string name)
+                    {
+                        var vm = GetJobVm(name);
+                        if (vm == null || !vm.IsControllable) return;
+                        _jobManager.StopJob(name);
+                        vm.SetStopped();
+                    }
+                });
 
             PauseAllCommand = new RelayCommand(_ =>
             {
                 _jobManager.PauseAll();
-                foreach (var vm in RunningJobs) vm.SetPaused(true);
+                foreach (var vm in RunningJobs.Where(v => v.IsControllable))
+                    vm.SetPaused(true);
             });
 
             PlayAllCommand = new RelayCommand(_ =>
             {
                 _jobManager.PlayAll();
-                foreach (var vm in RunningJobs) vm.SetPaused(false);
+                foreach (var vm in RunningJobs.Where(v => v.IsControllable))
+                    vm.SetPaused(false);
             });
 
-            StopAllCommand = new RelayCommand(_ => _jobManager.StopAll());
+            StopAllCommand = new RelayCommand(_ =>
+            {
+                _jobManager.StopAll();
+                foreach (var vm in RunningJobs.Where(v => v.IsControllable))
+                    vm.SetStopped();
+            });
         }
 
         public void Reset()

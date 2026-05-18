@@ -7,11 +7,18 @@ public class RunningJobViewModel : ViewModelBase, IBackupObserver
 
     private readonly Action _onUpdated;
 
-    private string _state = "Inactive";
+    private string _state = "Pending";
     public string State
     {
         get => _state;
-        private set => SetProperty(ref _state, value);
+        private set
+        {
+            if (SetProperty(ref _state, value))
+            {
+                OnPropertyChanged(nameof(IsRunningAndNotPaused));
+                OnPropertyChanged(nameof(IsControllable));
+            }
+        }
     }
 
     private int _totalFiles;
@@ -71,8 +78,18 @@ public class RunningJobViewModel : ViewModelBase, IBackupObserver
     public bool IsStopped
     {
         get => _isStopped;
-        private set => SetProperty(ref _isStopped, value);
+        private set
+        {
+            if (SetProperty(ref _isStopped, value))
+            {
+                OnPropertyChanged(nameof(IsRunningAndNotPaused));
+                OnPropertyChanged(nameof(IsControllable));
+            }
+        }
     }
+
+    public bool IsControllable =>
+        State != "Inactive" && State != "Stopped" && !IsStopped;
 
     public bool IsRunningAndNotPaused => State == "Active" && !IsPaused && !IsStopped;
 
@@ -91,14 +108,16 @@ public class RunningJobViewModel : ViewModelBase, IBackupObserver
         }
     }
 
-
     public void SetPaused(bool paused)
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
+            if (!IsControllable) return;
+
             IsPaused = paused;
-            if (paused)
-                State = paused ? "Paused" : (IsStopped ? "Stopped" : "Active");
+            State = paused ? "Paused" : "Active";
+            OnPropertyChanged(nameof(IsRunningAndNotPaused));
+            _onUpdated?.Invoke();
         });
     }
 
@@ -110,6 +129,7 @@ public class RunningJobViewModel : ViewModelBase, IBackupObserver
             IsPaused = false;
             State = "Stopped";
             OnPropertyChanged(nameof(IsRunningAndNotPaused));
+            _onUpdated?.Invoke();
         });
     }
 
@@ -119,9 +139,6 @@ public class RunningJobViewModel : ViewModelBase, IBackupObserver
 
         Application.Current.Dispatcher.Invoke(() =>
         {
-            if (!IsPaused && !IsStopped)
-                State = snapshot.State;
-
             TotalFiles = snapshot.TotalFiles;
             TotalSize = snapshot.TotalSize;
             ProcessedFiles = snapshot.ProcessedFiles;
@@ -129,17 +146,40 @@ public class RunningJobViewModel : ViewModelBase, IBackupObserver
             CurrentSourceFile = snapshot.CurrentSourceFile;
             CurrentDestinationFile = snapshot.CurrentDestinationFile;
 
-            if (snapshot.State == "Stopped")
-                SetStopped();
-
-            if (snapshot.State == "Inactive")
+            switch (snapshot.State)
             {
-                IsPaused = false;
-                IsStopped = false;
+                case "Stopped":
+                    IsStopped = true;
+                    IsPaused = false;
+                    State = "Stopped";
+                    break;
+
+                case "Inactive":
+                    IsStopped = false;
+                    IsPaused = false;
+                    State = "Inactive";
+                    break;
+
+                case "Paused":
+                    if (!IsStopped)
+                    {
+                        IsPaused = true;
+                        State = "Paused";
+                    }
+                    break;
+
+                default:
+                    if (!IsStopped)
+                    {
+                        if (!IsPaused || snapshot.State == "Waiting")
+                            State = snapshot.State;
+                    }
+                    break;
             }
 
             OnPropertyChanged(nameof(Percentage));
             OnPropertyChanged(nameof(IsRunningAndNotPaused));
+            OnPropertyChanged(nameof(IsControllable));
             _onUpdated?.Invoke();
         });
     }

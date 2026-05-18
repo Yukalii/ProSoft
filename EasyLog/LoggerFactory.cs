@@ -15,10 +15,11 @@
             string format,
             string logDirectory,
             string serverUrl,
-            Func<LogStorageMode> getMode)
+            Func<LogStorageMode> getMode,
+            Func<string> getFormat)
         {
             ILogger local = Resolve(format, logDirectory);
-            ILogger central = new ApiLogger(serverUrl);
+            ILogger central = new ApiLogger(serverUrl, getFormat);
             return new CompositeLogger(local, central, getMode);
         }
     }

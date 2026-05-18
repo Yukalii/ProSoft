@@ -196,7 +196,10 @@ namespace EasySave.ViewModel
                 _configManager.Config.LogFormat,
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _configManager.Config.LogDirectory),
             _configManager.Config.LogServerUrl,
-            () => _configManager.Config.LogStorageMode);
+            () => _configManager.Config.LogStorageMode,
+            () => _configManager.Config.LogFormat);
+
+            _dynamicLogger.SwapLogger(newLogger);
         }
     }
 }
