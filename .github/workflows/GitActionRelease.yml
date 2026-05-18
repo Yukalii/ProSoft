@@ -36,6 +36,9 @@ jobs:
     - name: Publish EasyLogServer
       run: dotnet publish EasyLogServer/EasyLogServer.csproj -c Release -r ${{ matrix.targetos }} --self-contained true -p:PublishSingleFile=true -o ./publish/${{ matrix.targetos }}/Bundle
 
+    - name: Publish EasyLogServer (Linux for Docker)
+      run: dotnet publish EasyLogServer/EasyLogServer.csproj -c Release -r linux-musl-x64 --self-contained true -p:PublishSingleFile=true -o ./publish/${{ matrix.targetos }}/Bundle/docker-build
+
     - name: Copy Docker files
       shell: pwsh
       run: |
