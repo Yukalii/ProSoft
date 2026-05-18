@@ -36,6 +36,12 @@ jobs:
     - name: Publish EasyLogServer
       run: dotnet publish EasyLogServer/EasyLogServer.csproj -c Release -r ${{ matrix.targetos }} --self-contained true -p:PublishSingleFile=true -o ./publish/${{ matrix.targetos }}/Bundle
 
+    - name: Copy Docker files
+      shell: pwsh
+      run: |
+        Copy-Item -Path "EasyLogServer/Dockerfile" -Destination "./publish/${{ matrix.targetos }}/Bundle/"
+        Copy-Item -Path "EasyLogServer/docker-compose.yml" -Destination "./publish/${{ matrix.targetos }}/Bundle/"
+    
     # 4. Zip the entire bundle together
     - name: Zip Output
       shell: pwsh
